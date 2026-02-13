@@ -40,6 +40,8 @@ urlpatterns = [
     path("documente-generated/update-data/<int:doc_id>/", views.update_document_data, name="update_document_data"),
     path("documente-generated/restore/<int:doc_id>/", views.restore_document, name="restore_document"),
     path('administrare/serie-data/details-ajax/<int:pk>/', views.serie_extra_data_details_ajax, name='serie_extra_data_details_ajax'),
+    path("redirect-mfa/", views.redirect_to_mfa, name="redirect_to_mfa"),
+    path("sso-login/", views.sso_login, name="sso_login"),
 ]
 
 if settings.DEBUG:

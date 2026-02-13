@@ -3208,3 +3208,44 @@ def restore_document(request, doc_id):
             'status': 'error',
             'message': f'Eroare la restaurarea documentului: {str(e)}'
         }, status=500)
+
+
+# =============================================
+# SSO Redirect catre Moldova Farming Agricultura
+# =============================================
+@login_required
+def redirect_to_mfa(request):
+    """Genereaza un token semnat si redirectioneaza catre ddcf-mfa."""
+    from django.core.signing import TimestampSigner
+    signer = TimestampSigner()
+    token = signer.sign(request.user.username)
+    target_url = f"https://ddcf-mfa.moldovafarming.ro/sso-login/?token={token}"
+    return redirect(target_url)
+
+
+# =============================================
+# SSO Login din Moldova Farming Agricultura (ddcf-mfa)
+# =============================================
+def sso_login(request):
+    """Primeste un token semnat de pe ddcf-mfa si autentifica utilizatorul."""
+    from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
+    token = request.GET.get('token')
+    if not token:
+        return redirect('/login/')
+
+    signer = TimestampSigner()
+    try:
+        # Token-ul expira in 30 de secunde
+        username = signer.unsign(token, max_age=30)
+    except (BadSignature, SignatureExpired):
+        messages.error(request, 'Link-ul de autentificare a expirat sau este invalid. Te rugam sa te loghezi manual.')
+        return redirect('/login/')
+
+    try:
+        user = User.objects.get(username=username)
+    except User.DoesNotExist:
+        messages.error(request, 'Utilizatorul nu a fost gasit pe aceasta platforma.')
+        return redirect('/login/')
+
+    login(request, user)
+    return redirect('/')
