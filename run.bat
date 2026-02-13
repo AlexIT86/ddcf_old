@@ -19,7 +19,7 @@ python manage.py migrate --run-syncdb
 echo.
 
 :: Pornire server
-echo [*] Pornire server pe http://127.0.0.1:8087/
+echo [*] Pornire server pe http://127.0.0.1:8088/
 echo [*] Pentru oprire: CTRL+C
 echo.
 python manage.py runserver 8087
