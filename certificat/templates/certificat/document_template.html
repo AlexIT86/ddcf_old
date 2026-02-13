@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <title>Document de Calitate și Conformitate</title>
+    <style>
+        body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 14px;
+            margin: 30px;
+        }
+        .header, .section {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .header .left {
+            float: left;
+        }
+        .header .right {
+            float: right;
+            text-align: right;
+        }
+        .clear {
+            clear: both;
+        }
+        .field-label {
+            font-weight: bold;
+        }
+        .dynamic {
+            color: red;
+            font-weight: bold;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        td {
+            vertical-align: top;
+            padding: 3px 5px;
+        }
+        .center-text {
+            text-align: center;
+        }
+        .small-space {
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+   <!-- Antetul: ROMANIA și informațiile de serie -->
+   <div class="header">
+      <div class="left">
+         ROMANIA
+      </div>
+      <div class="right">
+         Serie si numar carnet in functie de specie
+      </div>
+      <div class="clear"></div>
+   </div>
+
+   <!-- Date statice despre furnizor -->
+   <div class="section">
+      <table>
+         <tr>
+            <td class="field-label">FURNIZOR:</td>
+            <td class="dynamic">{{ furnizor }}</td>
+         </tr>
+         <tr>
+            <td class="field-label">INREGISTRAT Nr.:</td>
+            <td class="dynamic">IL-0463-00C</td>
+         </tr>
+         <tr>
+            <td class="field-label">Adresa:</td>
+            <td class="dynamic">Bacau, Calea Moinesti nr. 34, jud. Bacau</td>
+         </tr>
+         <tr>
+            <td class="field-label">Cod fiscal:</td>
+            <td class="dynamic">30543505</td>
+         </tr>
+      </table>
+   </div>
+
+   <!-- Titlul documentului -->
+   <div class="section center-text" style="margin-top: 30px; font-size: 16px; font-weight: bold;">
+      DOCUMENT DE CALITATE SI CONFORMITATE AL FURNIZORULUI
+   </div>
+
+   <!-- Linie cu numar document, numar carnet și data avizului -->
+   <div class="section center-text small-space">
+      Nr. <span class="dynamic">{{ numar_document }}</span> &nbsp;&nbsp;&nbsp;
+      Numar carnet &nbsp;&nbsp;&nbsp;
+      Data avizului: <span class="dynamic">{{ data_aviz }}</span>
+   </div>
+
+   <!-- Tabelul cu 4 coloane (Beneficiar, Denumire client de pe aviz iesire, Specia, Clasa caracterizare articol) -->
+   <div class="section" style="margin-top: 30px;">
+      <table style="width:100%; border:1px solid #000; border-collapse: collapse;">
+         <tr>
+            <td style="border:1px solid #000; padding:5px;">
+                <span class="field-label">Beneficiar</span>
+            </td>
+            <td style="border:1px solid #000; padding:5px;">
+                <span class="field-label">Denumire client de pe aviz iesire</span>
+            </td>
+            <td style="border:1px solid #000; padding:5px;">
+                <span class="field-label">Specia</span>
+            </td>
+            <td style="border:1px solid #000; padding:5px;">
+                <span class="field-label">Clasa caracterizare articol</span>
+            </td>
+         </tr>
+         <tr>
+            <td style="border:1px solid #000; padding:5px;" class="dynamic">
+                {{ beneficiar }}
+            </td>
+            <td style="border:1px solid #000; padding:5px;" class="dynamic">
+                {{ denumire_client }}
+            </td>
+            <td style="border:1px solid #000; padding:5px;" class="dynamic">
+                {{ specia }}
+            </td>
+            <td style="border:1px solid #000; padding:5px;" class="dynamic">
+                {{ clasa|default:"" }}
+            </td>
+         </tr>
+      </table>
+   </div>
+
+   <!-- Restul documentului - secțiuni și tabele cu câmpurile editabile -->
+   <!-- Secțiunea pentru Soiul (hibridul) și Denumire articol -->
+   <div class="section">
+      <table>
+         <tr>
+           <td class="field-label">Soiul (hibridul):</td>
+           <!-- Am eliminat fallback-ul la 'articol' și folosim doar 'soi' -->
+           <td class="dynamic">{{ soi|default:"" }}</td>
+           <td colspan="2">(se specifica daca este modificat genetic si codul de identificare)</td>
+        </tr>
+         <tr>
+            <td class="field-label">Denumire articol:</td>
+            <td class="dynamic">{{ articol|default:"" }}</td>
+            <td colspan="2"></td>
+         </tr>
+         <tr>
+            <td class="field-label">Categoria biologica:</td>
+            <td class="dynamic">{{ categoria|default:"" }}</td>
+            <td colspan="2"></td>
+         </tr>
+         <tr>
+            <td class="field-label">Nr. de referinta al lotului:</td>
+            <td class="dynamic">{{ nr_referinta|default:"" }}</td>
+            <td class="field-label">Lot de pe aviz:</td>
+            <td class="dynamic">{{ lot|default:"" }}</td>
+         </tr>
+         <tr>
+            <td class="field-label">Cantitatea livrata (kg/saci):</td>
+            <td class="dynamic">{{ cantitate|default:"" }}</td>
+            <td class="field-label">Cantitate aferenta lot de pe aviz + UM articol:</td>
+            <td class="dynamic">{{ cantitate_aviz|default:"" }}</td>
+         </tr>
+         <tr>
+            <td class="field-label">Nr. de ambalaje si tip:</td>
+            <td class="dynamic">{{ nr_ambalaje|default:"" }}</td>
+            <td colspan="2"></td>
+         </tr>
+         <tr>
+            <td class="field-label">Document oficial de certificare a semintei nr.:</td>
+            <td class="dynamic">{{ doc_certificare|default:"" }}</td>
+            <td class="field-label">Emitent:</td>
+            <td class="dynamic">{{ emitent|default:"" }}</td>
+         </tr>
+         <tr>
+            <td class="field-label">Data:</td>
+            <td class="dynamic">{{ data_doc|default:"" }}</td>
+            <td colspan="2"></td>
+         </tr>
+         <tr>
+            <td class="field-label">Etichete oficiale, seria si nr. de la:</td>
+            <td class="dynamic">{{ etichete_de_la|default:"" }}</td>
+            <td class="field-label">pana la:</td>
+            <td class="dynamic">{{ etichete_pana|default:"" }}</td>
+         </tr>
+      </table>
+   </div>
+
+   <!-- Secțiunea de calitate a lotului -->
+   <div class="section">
+      <table>
+         <tr>
+            <td colspan="4" class="field-label">Calitatea lotului:</td>
+         </tr>
+         <tr>
+            <td>- puritate fizica:</td>
+            <td class="dynamic">{{ puritate|default:"" }}</td>
+            <td>- seminte straine nr. / %:</td>
+            <td class="dynamic">{{ seminte|default:"" }}</td>
+         </tr>
+         <tr>
+            <td>- umiditate %:</td>
+            <td class="dynamic">{{ umiditate|default:"" }}</td>
+            <td>- germinatia totala %:</td>
+            <td class="dynamic">{{ germinatie|default:"" }}</td>
+         </tr>
+         <tr>
+            <td>- masa a 1000 boabe:</td>
+            <td class="dynamic">{{ masa|default:"" }}</td>
+            <td>- stare sanitara:</td>
+            <td class="dynamic">{{ stare_sanitala|default:"" }}</td>
+         </tr>
+         <tr>
+            <td colspan="4">Alte determinari: <span class="dynamic">{{ alte_determinari|default:"" }}</span></td>
+         </tr>
+         <tr>
+            <td colspan="4">- Cold test: %: <span class="dynamic">{{ cold_test|default:"" }}</span></td>
+         </tr>
+      </table>
+   </div>
+
+   <!-- Producator și tara de productie -->
+   <div class="section">
+      <table>
+         <tr>
+            <td class="field-label">Producator:</td>
+            <td class="dynamic">{{ producator|default:"" }}</td>
+            <td class="field-label">Tara de productie:</td>
+            <td class="dynamic">{{ tara_productie|default:"" }}</td>
+         </tr>
+      </table>
+   </div>
+
+   <!-- Informatii suplimentare despre tratate si termen de valabilitate -->
+   <div class="section">
+      <table>
+         <tr>
+            <td class="field-label">Samanta tratata cu:</td>
+            <td class="dynamic">{{ samanta_tratata|default:"" }}</td>
+         </tr>
+         <tr>
+            <td class="field-label">Termen de valabilitate (garantie):</td>
+            <td class="dynamic">{{ termen_valabilitate|default:"" }}</td>
+         </tr>
+      </table>
+   </div>
+
+   <!-- Mentiuni -->
+   <div class="section">
+      <div class="field-label">Mentiuni:</div>
+      <div class="dynamic">{{ mentiuni|default:"" }}</div>
+   </div>
+
+   <!-- Locul de depozitare și semnături -->
+   <div class="section">
+      <table>
+         <tr>
+            <td class="field-label">Locul de depozitare - livrare:</td>
+            <td class="dynamic">{{ loc_depozitare|default:"" }}</td>
+         </tr>
+         <tr>
+            <td class="field-label">Furnizor:</td>
+            <td class="dynamic">MOLDOVA FARMING SRL</td>
+         </tr>
+         <tr>
+            <td class="field-label">Beneficiar:</td>
+            <td class="dynamic">{{ beneficiar|default:"" }}</td>
+         </tr>
+         <tr>
+            <td colspan="2">(numele, prenumele, semnatura si stampila)</td>
+         </tr>
+      </table>
+   </div>
+</body>
+</html>

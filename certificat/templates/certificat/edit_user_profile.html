@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Editează Profil Utilizator{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>
+                <i class="bi bi-person-gear me-2"></i> Editare Profil Utilizator: <strong>{{ target_user.username }}</strong>
+            </span>
+            <a href="{% url 'administrare' %}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Înapoi la Administrare
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4 mb-4 mb-md-0">
+                    <div class="card h-100 bg-light">
+                        <div class="card-body text-center">
+                            <div class="mb-3">
+                                <i class="bi bi-person-circle" style="font-size: 5rem; color: #0d6efd;"></i>
+                            </div>
+                            <h5 class="mb-0">{{ target_user.username }}</h5>
+                            <p class="text-muted">{{ target_user.email|default:"Fără email" }}</p>
+
+                            <div class="mt-3 d-flex flex-column gap-2">
+                                {% if target_user.date_joined %}
+                                <div class="d-flex justify-content-between border-bottom pb-2">
+                                    <span>Utilizator creat:</span>
+                                    <span class="fw-bold">{{ target_user.date_joined|date:"d.m.Y" }}</span>
+                                </div>
+                                {% endif %}
+                                <div class="d-flex justify-content-between border-bottom pb-2">
+                                    <span>Rol:</span>
+                                    <span class="fw-bold">{% if user_profile.role %}{{ user_profile.role.name }}{% else %}Nedefinit{% endif %}</span>
+                                </div>
+                                <div class="d-flex justify-content-between pb-2">
+                                    <span>Gestiune:</span>
+                                    <span class="fw-bold">{% if user_profile.gestiune %}{{ user_profile.gestiune.nume }}{% else %}Neasignată{% endif %}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="row g-3">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.role.id_for_label }}" class="form-label">Rol:</label>
+                                {{ form.role|add_class:"form-select" }}
+                                {% if form.role.errors %}
+                                    <div class="text-danger">{{ form.role.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.gestiune.id_for_label }}" class="form-label">Gestiune:</label>
+                                {{ form.gestiune|add_class:"form-select" }}
+                                {% if form.gestiune.errors %}
+                                    <div class="text-danger">{{ form.gestiune.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <h5 class="mt-4 mb-3 border-bottom pb-2">Permisiuni Utilizator</h5>
+
+                        <div class="row g-3">
+                            <div class="col-md-6 mb-2">
+                                <div class="form-check form-switch">
+                                    {{ form.ok_aviz|add_class:"form-check-input" }}
+                                    <label class="form-check-label" for="{{ form.ok_aviz.id_for_label }}">
+                                        Generare Avize
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-2">
+                                <div class="form-check form-switch">
+                                    {{ form.ok_doc_generate|add_class:"form-check-input" }}
+                                    <label class="form-check-label" for="{{ form.ok_doc_generate.id_for_label }}">
+                                        Acces Certificate Generate
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-2">
+                                <div class="form-check form-switch">
+                                    {{ form.ok_plaje|add_class:"form-check-input" }}
+                                    <label class="form-check-label" for="{{ form.ok_plaje.id_for_label }}">
+                                        Gestionare Plaje Numere
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-2">
+                                <div class="form-check form-switch">
+                                    {{ form.ok_raportare|add_class:"form-check-input" }}
+                                    <label class="form-check-label" for="{{ form.ok_raportare.id_for_label }}">
+                                        Acces Raportare
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-2">
+                                <div class="form-check form-switch">
+                                    {{ form.ok_administrare|add_class:"form-check-input" }}
+                                    <label class="form-check-label" for="{{ form.ok_administrare.id_for_label }}">
+                                        Acces Administrare
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-2">
+                                <div class="form-check form-switch">
+                                    {{ form.ok_gestiuni|add_class:"form-check-input" }}
+                                    <label class="form-check-label" for="{{ form.ok_gestiuni.id_for_label }}">
+                                        Gestionare Gestiuni
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-2">
+                                <div class="form-check form-switch">
+                                    {{ form.ok_tipologii|add_class:"form-check-input" }}
+                                    <label class="form-check-label" for="{{ form.ok_tipologii.id_for_label }}">
+                                        Gestionare Tipologii
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h5 class="mt-4 mb-3 border-bottom pb-2 text-primary">Vizualizare Documente</h5>
+                        
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <div class="alert alert-info mb-3">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    Setează ce documente vede utilizatorul în pagina "Certificate Generate"
+                                </div>
+                                <div class="form-check form-switch">
+                                    {{ form.vede_toate_documentele|add_class:"form-check-input" }}
+                                    <label class="form-check-label fw-bold" for="{{ form.vede_toate_documentele.id_for_label }}">
+                                        <i class="bi bi-eye me-2"></i>Vede TOATE documentele din sistem
+                                    </label>
+                                    <div class="form-text ms-4">
+                                        <i class="bi bi-check-circle text-success"></i> Bifat: Vede toate documentele din sistem (de la toți utilizatorii)<br>
+                                        <i class="bi bi-x-circle text-warning"></i> Nebifat: Vede doar documentele generate de el
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 pt-3 border-top d-flex justify-content-between">
+                            <a href="{% url 'administrare' %}" class="btn btn-secondary">
+                                <i class="bi bi-x-lg"></i> Renunță
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save-fill"></i> Salvează Modificări
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

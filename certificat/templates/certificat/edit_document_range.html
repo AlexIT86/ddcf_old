@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% load static %}
+{% load widget_tweaks %} {# Pentru a adăuga clase CSS la câmpurile formularului #}
+
+{% block title %}Editează Plajă de Numere{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>
+                <i class="bi bi-pencil-square me-2"></i> Editare Plajă de Numere:
+                <strong>{{ doc_range.gestiune.nume }} - {{ doc_range.tipologie.nume }}</strong>
+            </span>
+            <a href="{% url 'administrare' %}?tab=documentrange" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Înapoi la Administrare
+            </a>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+
+                {# Afișare erori non-field ale formularului #}
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            <p class="mb-0">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <div class="row g-3">
+                    {# Gestiune - afișat ca text dacă este dezactivat pentru non-superadmin #}
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.gestiune.id_for_label }}" class="form-label">{{ form.gestiune.label }}</label>
+                        {% if form.gestiune.field.disabled %}
+                            <input type="text" class="form-control" value="{{ doc_range.gestiune.nume }}" readonly disabled>
+                            <div class="form-text">{{ form.gestiune.help_text }}</div>
+                            {{ form.gestiune.as_hidden }} {# Trimitem valoarea în POST chiar dacă e disabled #}
+                        {% else %}
+                            {{ form.gestiune|add_class:"form-select" }}
+                        {% endif %}
+                        {% if form.gestiune.errors %}
+                            <div class="text-danger small mt-1">{{ form.gestiune.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+
+                    {# Tipologie Produs #}
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.tipologie.id_for_label }}" class="form-label">{{ form.tipologie.label }}</label>
+                        {{ form.tipologie|add_class:"form-select" }}
+                        {% if form.tipologie.errors %}
+                            <div class="text-danger small mt-1">{{ form.tipologie.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+
+                    {# Număr Început #}
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.numar_inceput.id_for_label }}" class="form-label">{{ form.numar_inceput.label }}</label>
+                        {{ form.numar_inceput|add_class:"form-control" }}
+                        {% if form.numar_inceput.errors %}
+                            <div class="text-danger small mt-1">{{ form.numar_inceput.errors|striptags }}</div>
+                        {% endif %}
+                        {% if form.numar_inceput.help_text %}
+                            <div class="form-text">{{ form.numar_inceput.help_text|safe }}</div>
+                        {% endif %}
+                    </div>
+
+                    {# Număr Final #}
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.numar_final.id_for_label }}" class="form-label">{{ form.numar_final.label }}</label>
+                        {{ form.numar_final|add_class:"form-control" }}
+                        {% if form.numar_final.errors %}
+                            <div class="text-danger small mt-1">{{ form.numar_final.errors|striptags }}</div>
+                        {% endif %}
+                        {% if form.numar_final.help_text %}
+                            <div class="form-text">{{ form.numar_final.help_text|safe }}</div>
+                        {% endif %}
+                    </div>
+
+                    {# Număr Curent #}
+                    <div class="col-md-12 mb-3">
+                        <label for="{{ form.numar_curent.id_for_label }}" class="form-label">{{ form.numar_curent.label }}</label>
+                        {{ form.numar_curent|add_class:"form-control" }}
+                        {% if form.numar_curent.errors %}
+                            <div class="text-danger small mt-1">{{ form.numar_curent.errors|striptags }}</div>
+                        {% endif %}
+                        {% if form.numar_curent.help_text %}
+                            <div class="form-text">{{ form.numar_curent.help_text|safe }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-top d-flex justify-content-between">
+                    <a href="{% url 'administrare' %}?tab=documentrange" class="btn btn-secondary">
+                        <i class="bi bi-x-lg"></i> Renunță
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save-fill"></i> Salvează Modificări
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

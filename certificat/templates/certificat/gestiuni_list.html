@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Gestiuni{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <h2>Gestiuni</h2>
+  {% if gestiuni %}
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Cod de Înregistrare</th>
+          <th>Nume</th>
+          <th>Locație</th>
+          <th>Acțiuni</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for g in gestiuni %}
+        <tr>
+          <td>{{ g.id }}</td>
+          <td>{{ g.cod_inregistrare|default:"Nedefinit" }}</td>
+          <td>{{ g.nume }}</td>
+          <td>{{ g.locatie }}</td>
+          <td>
+            <a href="{% url 'edit_gestiune' g.pk %}" class="btn btn-sm btn-warning" title="Editează">
+              <i class="bi bi-pencil"></i> Edit
+            </a>
+            <a href="{% url 'delete_gestiune' g.pk %}" class="btn btn-sm btn-danger" onclick="return confirm('Sigur dorești să ștergi gestiunea?');" title="Șterge">
+              <i class="bi bi-trash"></i> Șterge
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>Nu s-au găsit gestiuni.</p>
+  {% endif %}
+</div>
+{% endblock %}

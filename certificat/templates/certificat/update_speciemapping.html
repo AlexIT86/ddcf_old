@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Importă Specii Noi{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <h2>Importă Specii Noi</h2>
+  <form method="post">
+    {% csrf_token %}
+    {{ formset.management_form }}
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Specie</th>
+          <th>Tipologie</th>
+          <th>Erori</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for form in formset %}
+          <tr>
+            <td>
+              <!-- Afișează numele speciei (din initial) -->
+              {{ form.specie.value }}
+              {{ form.specie }}
+            </td>
+            <td>
+              {{ form.tipologie }}
+            </td>
+            <td>
+              {% if form.tipologie.errors %}
+                <div class="text-danger">{{ form.tipologie.errors }}</div>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <button type="submit" class="btn btn-primary">Salvează mapping‑ul</button>
+  </form>
+</div>
+{% endblock %}

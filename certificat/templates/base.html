@@ -1,0 +1,205 @@
+{% load static %}
+{% load dict_extras %} {# Păstrăm dacă este folosit în alte părți #}
+
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Aplicația Mea{% endblock %}</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <!-- Favicon -->
+    <link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
+    <!-- Custom CSS -->
+    <style>
+        body {
+            /* Adaugă padding sus dacă navbar-ul este fixed-top */
+             padding-top: 70px; /* Ajustează valoarea în funcție de înălțimea navbar-ului */
+             background-color: #f8f9fa; /* O culoare de fundal neutră */
+        }
+
+        .navbar {
+            box-shadow: 0 2px 4px rgba(0,0,0,.1);
+        }
+
+        .navbar-brand img {
+            max-height: 40px; /* Ajustează înălțimea logo-ului */
+            margin-right: 10px;
+        }
+
+        .navbar .nav-link {
+            font-weight: 500;
+            margin-right: 0.5rem;
+             padding-left: 0.8rem;
+             padding-right: 0.8rem;
+        }
+         .navbar .nav-link i {
+             margin-right: 0.4rem;
+         }
+
+        .navbar .nav-link.active {
+            /* Stil pentru link activ în navbar */
+             color: #0d6efd !important;
+             /* background-color: rgba(13, 110, 253, 0.1); /* Fundal subtil */
+             border-bottom: 2px solid #0d6efd;
+             padding-bottom: calc(0.5rem - 2px); /* Ajustează padding pentru a compensa bordura */
+        }
+
+
+        /* Poți adăuga aici stiluri globale sau specifice */
+        .container {
+            max-width: 1400px; /* Lățime maximă puțin mai mare */
+        }
+
+        .card {
+             border: none;
+             border-radius: 0.5rem;
+             box-shadow: 0 0 15px rgba(0,0,0,0.07);
+             margin-bottom: 1.5rem;
+        }
+        .card-header {
+            background-color: #fff;
+            border-bottom: 1px solid #dee2e6;
+            font-weight: 600;
+        }
+
+         /* Asigură-te că mesajele flash sunt vizibile peste navbar */
+         .django-messages {
+             position: fixed;
+             top: 80px; /* Sub navbar */
+             left: 50%;
+             transform: translateX(-50%);
+             z-index: 1050; /* Peste majoritatea elementelor */
+             width: auto;
+             max-width: 80%;
+         }
+
+
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+    <!-- ========== Navbar Nou (Înlocuiește Sidebar) ========== -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white fixed-top"> {# Am adăugat fixed-top și bg-white #}
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'home' %}">
+                 {# <img src="{% static 'logo.png' %}" alt="Logo"> #} {# Decomentează și ajustează dacă ai logo #}
+                 CertApp
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}" aria-current="page" href="{% url 'home' %}">
+                            <i class="bi bi-house-door-fill"></i> Acasă
+                        </a>
+                    </li>
+                     {% if user.userprofile.ok_aviz %}
+                     <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'generate_docx_aviz' %}active{% endif %}" href="{% url 'generate_docx_aviz' %}">
+                           <i class="bi bi-file-earmark-plus-fill"></i> Generează Certificat
+                        </a>
+                     </li>
+                     {% endif %}
+                     {% if user.userprofile.ok_doc_generate %}
+                     <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'generated_documents_list' %}active{% endif %}" href="{% url 'generated_documents_list' %}">
+                           <i class="bi bi-journal-check"></i> Certificate Generate
+                        </a>
+                     </li>
+                    {% endif %}
+                    {# % if user.userprofile.ok_plaje or user.userprofile.role.name|lower == 'superadmin' %} #}
+                    {#<li class="nav-item">#}
+                         {# <a class="nav-link {% if request.resolver_match.url_name == 'documentrange_list' %}active{% endif %}" href="{% url 'documentrange_list' %}">#}
+                              {#<i class="bi bi-body-text"></i> Plaje Numere#}
+                         {#</a>#}
+                     {#</li>#}
+                    {#{% endif %}#}
+                    {% if user.userprofile.ok_raportare %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'raportare' %}active{% endif %}" href="{% url 'raportare' %}">
+                           <i class="bi bi-graph-up"></i> Raportare
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% if user.userprofile.ok_administrare %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'administrare' %}active{% endif %}" href="{% url 'administrare' %}">
+                           <i class="bi bi-gear-wide-connected"></i> Administrare
+                        </a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'view_manual' %}active{% endif %}" href="{% url 'view_manual' %}">
+                            <i class="bi bi-book"></i> Manual Utilizare
+                        </a>
+                    </li>
+                </ul>
+                <!-- Partea Dreaptă a Navbar-ului (Logout, User Info) -->
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                     {% if user.is_authenticated %}
+                         <li class="nav-item dropdown">
+                             <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownUser" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                 <i class="bi bi-person-circle"></i> {{ user.username }}
+                             </a>
+                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownUser">
+                                <li><a class="dropdown-item" href="{% url 'change_password' %}">
+                                    <i class="bi bi-key-fill"></i> Schimbă Parola
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form action="{% url 'logout' %}" method="post" style="display: inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="dropdown-item">
+                                            <i class="bi bi-box-arrow-right"></i> Logout
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                         </li>
+                     {% else %}
+                         <li class="nav-item">
+                             <a class="nav-link" href="{% url 'login' %}">
+                                 <i class="bi bi-box-arrow-in-right"></i> Login
+                             </a>
+                         </li>
+                     {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <!-- ========== Sfârșit Navbar Nou ========== -->
+
+    <!-- Container Principal pentru Conținut -->
+    <div class="container mt-4"> {# Am eliminat clasa specifică de content #}
+        <!-- Mesaje Django (Flash Messages) -->
+        {% if messages %}
+            <div class="django-messages"> {# Container pentru poziționare #}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- Blocul de Conținut Specific Paginii -->
+        {% block content %}
+        {% endblock %}
+    </div>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- În secțiunea de scripturi din base.html -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <!-- Extra JS Block -->
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

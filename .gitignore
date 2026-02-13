@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Django
+db.sqlite3
+*.sqlite3
+*.sqlite
+/media/
+/staticfiles/
+/static_collected/
+
+# Project specific
+/generated_docs_bkp/
+/generated_docs.zip
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Logs
+*.log
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Temporary Office files
+~$*
+
+# Data exports and logs
+*.csv
+*.xlsx
+*.xls
+log_*.txt
+db.sqlite3-old

@@ -1,0 +1,847 @@
+{% extends "base.html" %}
+{% load static dict_extras %}
+
+{% block title %}Documente Generate{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Stiluri pentru validare vizuală în modal (păstrăm) */
+    .input-required-empty {
+      background-color: #ffdddd !important;
+    }
+    .input-required-filled {
+      background-color: #ffffff !important;
+      font-weight: bold !important;
+    }
+
+    /* Stil specific pentru zona de filtre/statistici (păstrăm) */
+    .filters-stats-section {
+        background-color: #f8f9fa;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #dee2e6;
+        margin-bottom: 0;
+    }
+    .filters-stats-section .form-label {
+        margin-bottom: 0;
+        font-weight: 500;
+    }
+    .filters-stats-section .stats-display {
+        padding: 0.75rem 1rem;
+        background-color: #e9ecef;
+        border-radius: 0.3rem;
+        font-size: 0.9rem;
+        text-align: center;
+    }
+    @media (min-width: 992px) {
+        .filters-stats-section .stats-display {
+            text-align: left;
+        }
+    }
+
+    /* Stil specific pentru tab-urile din modalul de editare (opțional, pt consistență) */
+    #seriesTabsEdit .nav-link {
+        padding: 0.5rem 0.8rem;
+        font-size: 0.9rem;
+        border-bottom-width: 2px;
+        text-align: left;
+        color: #495057; /* Culoare text inactiv */
+         background-color: #f8f9fa; /* Fundal tab inactiv */
+         border-color: #dee2e6 #dee2e6 #dee2e6;
+    }
+    #seriesTabsEdit .nav-link small {
+        display: block;
+        font-size: 0.75rem;
+        color: #6c757d;
+    }
+    #seriesTabsEdit .nav-link.active {
+        font-weight: bold;
+        color: #0d6efd;
+        background-color: #ffffff;
+        border-color: #dee2e6 #dee2e6 #ffffff;
+    }
+    #seriesTabsEdit .nav-link small.serie-cantitate-um {
+        display: block;
+        font-size: 0.8rem;
+        font-weight: bold;
+        color: #dc3545; /* Roșu */
+        margin-top: 3px;
+    }
+
+    /* Stil pentru loading overlay (dacă nu e global) */
+    #loading-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        display: flex; flex-direction: column; justify-content: center; align-items: center;
+        z-index: 1060; /* Peste modal */
+        display: none; /* Ascuns inițial */
+    }
+    .spinner {
+        width: 60px; height: 60px;
+        border: 6px solid #f3f3f3; border-top: 6px solid #3498db;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+    .loading-text { margin-top: 20px; color: white; font-size: 18px; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+</style>
+{% endblock %}
+
+
+{% block content %}
+<div class="container mt-4 mb-5">
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+             <span>
+                <i class="bi bi-journal-check admin-icon"></i>
+                Certificate Generate
+            </span>
+            <a href="{% url 'generate_docx_aviz' %}" class="btn btn-sm btn-primary">
+                <i class="bi bi-file-earmark-plus-fill"></i> Generează Certificat Nou
+            </a>
+        </div>
+
+        <div class="filters-stats-section">
+             <div class="row gy-3 align-items-center">
+                <div class="col-lg-8">
+                    <form method="get" class="row gx-2 gy-2 align-items-center">
+                        {% if is_admin_or_super %}
+                        <div class="col-12 d-flex align-items-center gap-2 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="yes" id="view_as_user" name="view_as_user" {% if view_as_user %}checked{% endif %} onchange="this.form.submit()">
+                                <label class="form-check-label" for="view_as_user">
+                                    Vizualizează ca utilizator (filtrare pe gestiune)
+                                </label>
+                            </div>
+                            <div class="ms-2" {% if not view_as_user %}style="opacity:0.6; pointer-events:none;"{% endif %}>
+                                <label for="sim_gestiune_id" class="form-label mb-0">Gestiune:</label>
+                                <select id="sim_gestiune_id" name="sim_gestiune_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                                    <option value="">— Alege gestiunea —</option>
+                                    {% for g in gestiuni %}
+                                        <option value="{{ g.id }}" {% if sim_gestiune_id and g.id == sim_gestiune_id %}selected{% endif %}>{{ g.nume }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        {% endif %}
+                        <div class="col-auto"><label for="aviz" class="form-label">Aviz:</label></div>
+                        <div class="col-auto"><input type="text" id="aviz" name="aviz" class="form-control form-control-sm" value="{{ request.GET.aviz }}" placeholder="Număr aviz..."></div>
+                        <div class="col-auto"><label for="lot" class="form-label">LOT:</label></div>
+                        <div class="col-auto"><input type="text" id="lot" name="lot" class="form-control form-control-sm" value="{{ request.GET.lot }}" placeholder="Număr LOT..."></div>
+                        <div class="col-auto"><label for="articol" class="form-label">Articol:</label></div>
+                        <div class="col-auto"><input type="text" id="articol" name="articol" class="form-control form-control-sm" value="{{ request.GET.articol }}" placeholder="Nume articol..."></div>
+                        <div class="col-auto"><label for="partener" class="form-label">Partener:</label></div>
+                        <div class="col-auto"><input type="text" id="partener" name="partener" class="form-control form-control-sm" value="{{ request.GET.partener }}" placeholder="Nume partener..."></div>
+                        <div class="col-auto ms-md-2">
+                            <button type="submit" class="btn btn-info btn-sm"><i class="bi bi-funnel-fill"></i> Filtrează</button>
+                            <a href="{% url 'generated_documents_list' %}" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-clockwise"></i> Resetează</a>
+                        </div>
+                        <div class="col-auto">
+                                <label for="include_deleted" class="form-label">Documente șterse:</label>
+                                <select id="include_deleted" name="include_deleted" class="form-select form-select-sm" onchange="this.form.submit()">
+                                    <option value="yes" {% if request.GET.include_deleted != 'no' %}selected{% endif %}>Arată</option>
+                                    <option value="no" {% if request.GET.include_deleted == 'no' %}selected{% endif %}>Ascunde</option>
+                                </select>
+                            </div>
+                    </form>
+                </div>
+                <div class="col-lg-4">
+                     <div class="stats-display">
+                        Total Avize: <strong>{{ total_avize }}</strong> |
+                        Finalizate: <strong class="text-success">{{ avize_finalizate }}</strong> |
+                        În Procesare: <strong class="text-warning">{{ avize_procesare }}</strong>
+                        {% if stats_source %}
+                            <small class="text-muted ms-2">(date pentru {{ stats_source }})</small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-0">
+            {% if page_obj %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped table-admin mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Aviz</th>
+                                <th>Serie Document</th>
+                                <th>Partener</th>
+                                <th class="text-center">Status</th>
+                                <th>Generat De</th>
+                                <th>Data Generării</th>
+                                <th class="text-end">Acțiuni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for doc in page_obj %}
+                                <tr{% if doc.is_deleted %} class="table-danger"{% endif %}>
+                                    <td>
+                                        {{ doc.aviz_number }}
+                                        {% if doc.is_deleted %}
+                                            <span class="badge bg-danger ms-1" title="Document șters">Șters</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {{ doc.document_series|default:"<span class='text-muted'>N/A</span>"|safe }}
+                                        {% if doc.regenerated %}
+                                            <span class="badge bg-info ms-1" title="Document regenerat">
+                                                <i class="bi bi-arrow-repeat"></i> {{ doc.regeneration_count }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ doc.partner|default:"<span class='text-muted'>--</span>"|safe }}</td>
+                                    <td class="text-center">
+                                        <span class="badge rounded-pill {% if doc.status == 'finalizat' %}bg-success{% elif doc.status == 'in procesare' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                            {{ doc.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ doc.generated_by.username }}</td>
+                                    <td>
+                                        {{ doc.created_at|date:"d.m.Y H:i" }}
+                                        {% if doc.regenerated %}
+                                            <br>
+                                            <small class="text-muted">
+                                                <i class="bi bi-arrow-repeat"></i> Regenerat: {{ doc.regenerated_at|date:"d.m.Y H:i" }}
+                                            </small>
+                                        {% endif %}
+                                        {% if doc.is_deleted %}
+                                            <br>
+                                            <small class="text-danger">
+                                                <i class="bi bi-trash-fill"></i> Șters: {{ doc.deleted_at|date:"d.m.Y H:i" }}
+                                                <br>de către: {{ doc.deleted_by.username }}
+                                            </small>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="btn-group btn-group-sm" role="group" aria-label="Acțiuni Document">
+                                            {% if doc.pdf_file and not doc.is_deleted %}
+                                                <a href="{{ doc.pdf_file.url }}" target="_blank" class="btn btn-outline-info" title="Vezi PDF">
+                                                    <i class="bi bi-file-earmark-pdf-fill"></i>
+                                                </a>
+                                            {% elif doc.pdf_file and doc.is_deleted %}
+                                                <a href="{{ doc.pdf_file.url }}" target="_blank" class="btn btn-outline-secondary" title="Vezi PDF (document șters)">
+                                                    <i class="bi bi-file-earmark-pdf-fill"></i>
+                                                </a>
+                                            {% endif %}
+
+                                            {% if not doc.is_deleted %}
+                                                {# Butonul "Vezi Produse" - disponibil pentru toată lumea #}
+                                                <button type="button" class="btn btn-outline-secondary view-details-btn" data-aviz="{{ doc.aviz_number }}" data-doc-id="{{ doc.id }}" title="Vezi Articolele Incluse">
+                                                    <i class="bi bi-list-ul"></i>
+                                                </button>
+                                                
+                                                {# Butoanele de editare - vizibile pentru proprietar SAU superadmin #}
+                                                {% if doc.generated_by.id == user.id or user.userprofile.role.name|lower == 'superadmin' %}
+                                                    <button type="button" class="btn btn-outline-warning edit-doc-btn"
+                                                            data-doc-id="{{ doc.id }}"
+                                                            data-url="{% url 'edit_generated_document' doc.id %}" title="Editează Detalii">
+                                                        <i class="bi bi-pencil-fill"></i>
+                                                    </button>
+                                                    {% if doc.status == 'finalizat' or doc.status == 'in procesare' %}
+                                                        <a href="{% url 'update_document_data' doc.id %}" class="btn btn-outline-primary" title="Actualizează Date din API" onclick="return confirm('Sigur doriți să actualizați datele pentru acest document? Operația va prelua date noi din sursa externă.');">
+                                                            <i class="bi bi-arrow-clockwise"></i>
+                                                        </a>
+                                                    {% endif %}
+                                                {% endif %}
+                                            {% else %}
+                                                <button type="button" class="btn btn-outline-secondary disabled" title="Editare indisponibilă (document șters)">
+                                                    <i class="bi bi-pencil-fill"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-secondary view-details-btn" data-aviz="{{ doc.aviz_number }}" data-doc-id="{{ doc.id }}" title="Vezi Articolele Incluse">
+                                                    <i class="bi bi-list-ul"></i>
+                                                </button>
+                                            {% endif %}
+
+                                            {% if user.userprofile.role.name|lower == 'superadmin' %}
+                                                {% if doc.is_deleted %}
+                                                    <button type="button" class="btn btn-outline-success restore-doc-btn"
+                                                            onclick="restoreDocument({{ doc.id }})" title="Restaurează Document">
+                                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                                    </button>
+                                                {% else %}
+                                                    <a href="{% url 'delete_generated_document' doc.id %}" class="btn btn-outline-danger"
+                                                       onclick="return confirm('Sigur doriți să marcați acest document ca șters? Va rămâne vizibil în listă, dar va fi marcat ca șters.');"
+                                                       title="Marchează ca Șters">
+                                                        <i class="bi bi-trash-fill"></i>
+                                                    </a>
+                                                {% endif %}
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                 <div class="p-4 text-center text-muted">
+                    <i class="bi bi-journal-x fs-3 d-block mb-2"></i>
+                    Nu s-au găsit documente generate conform filtrelor selectate.
+                     <br>
+                    <a href="{% url 'generate_docx_aviz' %}" class="btn btn-link mt-2">Generează un aviz nou</a>
+                </div>
+            {% endif %}
+        </div>
+
+        {# Pagination controls #}
+        <div class="card-footer py-2">
+            {% include "partials/_pagination.html" with page_obj=page_obj %}
+        </div>
+
+    </div>
+</div>
+
+<div class="modal fade" id="editDocumentModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-body">
+        <div class="text-center p-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 mb-0">Se încarcă datele pentru editare...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="detailsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="detailsModalLabel">Detalii Articole pentru Aviz <span id="details-aviz-number" class="fw-bold"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="detailsModalBody">
+         <div class="text-center p-5">
+             <div class="spinner-border text-secondary spinner-border-sm" role="status">
+                 <span class="visually-hidden">Loading...</span>
+             </div>
+             <p class="mt-2 mb-0 text-muted small">Se încarcă detaliile articolelor...</p>
+         </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Închide</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <div class="loading-text">Vă rugăm așteptați...</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function restoreDocument(docId) {
+    if (confirm('Sigur doriți să restaurați acest document?')) {
+        fetch(`/documente-generated/restore/${docId}/`, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert(data.message);
+                location.reload(); // Reîncărcăm pagina pentru a vedea schimbările
+            } else {
+                alert(`Eroare: ${data.message}`);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('A apărut o eroare la restaurarea documentului. Vă rugăm să încercați din nou.');
+        });
+    }
+}
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    // --- Configurație și Constante ---
+    const DEBUG_MODE = true; // Setează pe false în producție
+    const log = (...args) => DEBUG_MODE && console.log(...args);
+    const logError = (...args) => console.error(...args);
+
+    const CONFIRM_MESSAGES = {
+        GENERATE_DOCUMENT: "Ești sigur că vrei să generezi documentul final? Această acțiune poate suprascrie un document existent și nu poate fi anulată.",
+        EMPTY_FIELDS_MODAL: "Există câmpuri obligatorii necompletate în filele: {0}\nCompletați toate câmpurile înainte de a genera documentul.",
+        FILL_REQUIRED_MODAL: "Vă rugăm să completați câmpul '{0}' în fila curentă înainte de a genera.",
+        AJAX_LOAD_ERROR: "Eroare la încărcarea datelor pentru editare. Reîncercați sau contactați suportul.",
+        AJAX_DETAILS_ERROR: "Eroare la încărcarea detaliilor articolelor.",
+    };
+
+    // --- Elemente DOM Globale ---
+    const editModalElement = document.getElementById('editDocumentModal');
+    const detailsModalElement = document.getElementById('detailsModal');
+    const loadingOverlay = document.getElementById('loading-overlay');
+
+    // --- Instanțe Modale Bootstrap ---
+    let bsEditModal = null;
+    let bsDetailsModal = null;
+    if (editModalElement) {
+        try {
+            bsEditModal = new bootstrap.Modal(editModalElement);
+            log("Bootstrap edit modal instance created.");
+        } catch (e) { logError("ERROR initializing Bootstrap edit modal:", e); }
+    } else { logError("Edit modal element (#editDocumentModal) not found."); }
+
+    if (detailsModalElement) {
+        try {
+            bsDetailsModal = new bootstrap.Modal(detailsModalElement);
+            log("Bootstrap details modal instance created.");
+        } catch (e) { logError("ERROR initializing Bootstrap details modal:", e); }
+    } else { logError("Details modal element (#detailsModal) not found."); }
+
+    // --- Variabile de Stare ---
+    let activeModalTrigger = null; // Butonul care a deschis ultimul modal, pentru focus return
+
+    // --- Funcții Utilitare ---
+
+    /**
+     * Afișează/Ascunde overlay-ul de încărcare.
+     * @param {boolean} show - True pentru a afișa, false pentru a ascunde.
+     * @param {string} [text] - Text opțional de afișat pe overlay.
+     */
+    const toggleLoadingOverlay = (show, text = 'Vă rugăm așteptați...') => {
+        if (!loadingOverlay) return;
+        const loadingTextElement = loadingOverlay.querySelector('.loading-text');
+        if (loadingTextElement) loadingTextElement.textContent = text;
+        loadingOverlay.style.display = show ? 'flex' : 'none';
+    };
+
+    /**
+     * Aplică stiluri de validare inputurilor dintr-un container.
+     * @param {HTMLElement} containerElement - Elementul container (ex: modal body, tab pane).
+     */
+    const applyInputValidationStyles = (containerElement) => {
+        if (!containerElement) return;
+        log("Applying validation styles within:", containerElement.id || containerElement.tagName);
+        const inputs = containerElement.querySelectorAll('input[type="text"], textarea');
+        inputs.forEach(input => {
+            const updateStyle = () => {
+                if (!input.disabled && !input.readOnly) {
+                    if (input.value.trim() === '') {
+                        input.classList.add('input-required-empty');
+                        input.classList.remove('input-required-filled');
+                    } else {
+                        input.classList.add('input-required-filled');
+                        input.classList.remove('input-required-empty');
+                    }
+                } else {
+                    input.classList.remove('input-required-empty', 'input-required-filled');
+                }
+            };
+            updateStyle();
+            input.removeEventListener('input', updateStyle);
+            input.addEventListener('input', updateStyle);
+        });
+    };
+
+    /**
+     * Formatează automat inputurile numerice (%, g, kg etc.) la pierderea focusului.
+     * @param {HTMLInputElement} element - Elementul input.
+     * @param {'percent'|'g'|'kg'|null} formatType - Tipul de formatare.
+     */
+        const setupAutoFormat = (element, formatType) => {
+        if (!element || !formatType) return;
+        let rawValue = element.value.replace(/[^\d.,-]/g, '').replace(',', '.');
+
+        const formatValue = () => {
+            rawValue = element.value.replace(/[^\d.,-]/g, '').replace(',', '.');
+            if (rawValue === '' || rawValue === '-' || rawValue === '.') return;
+            let numberValue = parseFloat(rawValue);
+            if (isNaN(numberValue)) return;
+
+            let formattedValue;
+            // Modificare aici: maximumFractionDigits de la 2 la 3
+            const options = { minimumFractionDigits: 0, maximumFractionDigits: 3 };
+            // Și aici: maximumFractionDigits pentru formatType === 'g' de la 1 la 3
+            if (formatType === 'g') options.maximumFractionDigits = 3;
+
+            formattedValue = numberValue.toLocaleString('ro-RO', options);
+
+            switch(formatType) {
+                case 'percent': formattedValue += ' %'; break;
+                case 'kg': formattedValue += ' kg'; break;
+                case 'g': formattedValue += ' g'; break;
+            }
+            element.value = formattedValue;
+        };
+
+        // Restul funcției rămâne neschimbat
+        const cleanValue = () => { element.value = rawValue; };
+
+        element.addEventListener('focus', cleanValue);
+        element.addEventListener('blur', formatValue);
+        element.addEventListener('input', () => {
+             rawValue = element.value.replace(/[^\d.,-]/g, '').replace(',', '.');
+        });
+        if (element.value) formatValue(); // Formatare inițială
+    };
+
+    /**
+     * Validează câmpurile obligatorii din modalul de editare.
+     * @returns {boolean} - True dacă validarea a trecut, false altfel.
+     */
+    const validateEditModalForm = () => {
+        log("Validating Edit Modal Form...");
+        const modalContent = document.querySelector('#editDocumentModal .modal-content');
+        if (!modalContent) {
+            logError("Edit modal content not found for validation.");
+            return false;
+        }
+
+        let firstEmptyField = null;
+        let firstEmptyFieldTabPane = null;
+        const emptyFieldTabs = new Set();
+        const allTabs = modalContent.querySelectorAll('.tab-pane');
+
+        const checkInputs = (container, isTabContext = false) => {
+            const inputs = container.querySelectorAll('input[type="text"]:not(:disabled):not([readonly]), textarea:not(:disabled):not([readonly])');
+            let containerHasEmpty = false;
+            inputs.forEach(input => {
+                // Simplificare: Considerăm toate inputurile text goale ca fiind o eroare
+                if (input.value.trim() === '') {
+                    input.classList.add('input-required-empty');
+                    input.classList.remove('input-required-filled');
+                    containerHasEmpty = true;
+                    if (!firstEmptyField) { // Reținem doar primul
+                        firstEmptyField = input;
+                        if (isTabContext) firstEmptyFieldTabPane = container;
+                    }
+                } else {
+                    input.classList.remove('input-required-empty');
+                    input.classList.add('input-required-filled');
+                }
+            });
+            return containerHasEmpty;
+        };
+
+        if (allTabs.length > 0) {
+            allTabs.forEach(tabPane => {
+                if (checkInputs(tabPane, true)) {
+                    const tabButton = document.querySelector(`[data-bs-target="#${tabPane.id}"]`);
+                    const tabNameSpan = tabButton?.querySelector('span');
+                    const tabName = tabNameSpan?.textContent.trim() || tabButton?.textContent.trim() || tabPane.id;
+                    emptyFieldTabs.add(tabName);
+                }
+            });
+        } else {
+            log("No tabs found in edit modal, checking direct inputs.");
+            checkInputs(modalContent.querySelector('.modal-body')); // Verificăm direct în modal-body
+        }
+
+        if (firstEmptyField) {
+            log("Validation failed. First empty field:", firstEmptyField);
+            let alertMessage = "";
+
+            if (firstEmptyFieldTabPane) {
+                const tabButton = document.querySelector(`[data-bs-target="#${firstEmptyFieldTabPane.id}"]`);
+                if (tabButton) {
+                    const tabInstance = bootstrap.Tab.getOrCreateInstance(tabButton);
+                    log("Switching to tab:", firstEmptyFieldTabPane.id);
+                    tabInstance.show(); // Arată tab-ul cu problema
+                }
+                alertMessage = CONFIRM_MESSAGES.EMPTY_FIELDS_MODAL.replace('{0}', Array.from(emptyFieldTabs).join(', '));
+            } else {
+                const label = document.querySelector(`label[for="${firstEmptyField.id}"]`);
+                const fieldName = label?.textContent.replace(':', '') || firstEmptyField.name;
+                alertMessage = CONFIRM_MESSAGES.FILL_REQUIRED_MODAL.replace('{0}', fieldName);
+            }
+
+            alert(alertMessage);
+
+            // Focus DUPĂ ce tab-ul e potențial schimbat
+            setTimeout(() => {
+                firstEmptyField.focus();
+                firstEmptyField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 200); // Un mic delay
+
+            return false; // Validarea a eșuat
+        }
+
+        log("Validation successful.");
+        return true; // Totul OK
+    };
+
+
+    /**
+     * Atașează listenerii specifici formularului injectat în modalul de editare.
+     */
+    const attachEditModalListeners = () => {
+        log("ATTACH EDIT: Attaching listeners to injected content...");
+        const form = document.getElementById('editExtraDetailsForm');
+        if (!form) {
+            logError("ATTACH EDIT: Form #editExtraDetailsForm not found!");
+            return;
+        }
+
+        // 1. Aplică stiluri și formatare inițială
+        applyInputValidationStyles(form);
+        // Aplicăm auto-formatare pe câmpurile specifice DUPĂ ce form-ul e în DOM
+         const modalBody = form.closest('.modal-body'); // Găsim containerul relevant
+         if(modalBody){
+            const percentFields = ['umiditate', 'puritate', 'sem_straine', 'germinatie', 'cold'];
+            percentFields.forEach(name => modalBody.querySelectorAll(`[name$="-${name}"]`).forEach(el => setupAutoFormat(el, 'percent'))); // Sufixul e important
+            modalBody.querySelectorAll('[name$="-masa_1000b"]').forEach(el => setupAutoFormat(el, 'g'));
+            // Adaugă alte formatări aici dacă e necesar
+            log("ATTACH EDIT: Auto-formatting applied.");
+         }
+
+
+        // 2. Listener pentru butonul GENEREAZĂ
+        const generateButton = form.querySelector('.generate-edit-btn');
+        if (generateButton) {
+            generateButton.addEventListener('click', function(event) {
+                log("ATTACH EDIT: Generate button clicked.");
+                if (!validateEditModalForm()) {
+                    log("ATTACH EDIT: Validation failed. Preventing submission.");
+                    event.preventDefault();
+                    return;
+                }
+                if (!confirm(CONFIRM_MESSAGES.GENERATE_DOCUMENT)) {
+                    log("ATTACH EDIT: Generation cancelled by user.");
+                    event.preventDefault();
+                    return;
+                }
+                log("ATTACH EDIT: Validation and confirmation passed. Showing overlay.");
+                toggleLoadingOverlay(true, 'Se generează documentul...');
+                // Lasă formularul să fie trimis
+            });
+            log("ATTACH EDIT: Generate listener attached.");
+        } else { logError("ATTACH EDIT: Generate button (.generate-edit-btn) not found."); }
+
+        // 3. Listener pentru butonul SALVEAZĂ
+        const saveButton = form.querySelector('.save-edit-btn');
+        if (saveButton) {
+            saveButton.addEventListener('click', function() {
+                log("ATTACH EDIT: Save button clicked. Showing overlay.");
+                // La salvare, nu facem validare strictă, doar arătăm overlay
+                toggleLoadingOverlay(true, 'Se salvează modificările...');
+                // Lasă formularul să fie trimis
+            });
+            log("ATTACH EDIT: Save listener attached.");
+        } else { logError("ATTACH EDIT: Save button (.save-edit-btn) not found."); }
+    };
+
+
+    // --- Listeneri Evenimente Modale ---
+
+    if (editModalElement) {
+        editModalElement.addEventListener('show.bs.modal', function (event) {
+            activeModalTrigger = event.relatedTarget; // Salvăm butonul declanșator
+            log('EVENT: show.bs.modal (Edit). Trigger:', activeModalTrigger?.tagName);
+        });
+
+        editModalElement.addEventListener('shown.bs.modal', function () {
+            log('EVENT: shown.bs.modal (Edit). Applying styles and focus.');
+            // Aplicăm stiluri și setăm focus DUPĂ ce modalul e vizibil și conținutul injectat
+            const modalBody = editModalElement.querySelector('.modal-body');
+             if (modalBody) {
+                applyInputValidationStyles(modalBody); // Aplică pe tot modalul inițial
+                 // Setăm focus pe primul element din tab-ul activ (dacă există) sau din modal
+                 const activeTabPane = modalBody.querySelector('.tab-pane.active');
+                 const firstFocusable = activeTabPane
+                     ? activeTabPane.querySelector('input:not([type="hidden"]):not(:disabled):not([readonly]), textarea:not(:disabled):not([readonly]), select:not(:disabled):not([readonly])')
+                     : modalBody.querySelector('input:not([type="hidden"]):not(:disabled):not([readonly]), textarea:not(:disabled):not([readonly]), select:not(:disabled):not([readonly])');
+                 if (firstFocusable) {
+                    firstFocusable.focus();
+                    log('Focused on:', firstFocusable.id || firstFocusable.name);
+                 } else {
+                     log('No focusable element found in edit modal.');
+                 }
+            }
+        });
+
+        // Listener pentru schimbarea tab-ului în modalul de editare
+         editModalElement.addEventListener('shown.bs.tab', function(event) {
+            log('EVENT: shown.bs.tab (Edit). Target:', event.target.dataset.bsTarget);
+            const targetPane = document.querySelector(event.target.dataset.bsTarget);
+            if (targetPane) {
+                applyInputValidationStyles(targetPane); // Reaplicăm stiluri pe noul tab
+                const firstFocusable = targetPane.querySelector('input:not([type="hidden"]):not(:disabled):not([readonly]), textarea:not(:disabled):not([readonly]), select:not(:disabled):not([readonly])');
+                if(firstFocusable) firstFocusable.focus(); // Re-focus
+            }
+        });
+
+
+        editModalElement.addEventListener('hidden.bs.modal', function () {
+            log('EVENT: hidden.bs.modal (Edit). Returning focus.');
+            // Returnăm focusul la elementul care a deschis modalul
+            if (activeModalTrigger && typeof activeModalTrigger.focus === 'function' && document.body.contains(activeModalTrigger)) {
+                activeModalTrigger.focus();
+            }
+            activeModalTrigger = null; // Resetăm
+            // Resetăm conținutul modalului la starea de 'loading' pentru următoarea deschidere
+            const modalContent = editModalElement.querySelector('.modal-content');
+             if(modalContent) {
+                modalContent.innerHTML = `<div class="modal-body"><div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2 mb-0">Se încarcă datele pentru editare...</p></div></div>`;
+            }
+        });
+    }
+
+     if (detailsModalElement) {
+        detailsModalElement.addEventListener('show.bs.modal', function (event) {
+            activeModalTrigger = event.relatedTarget;
+            log('EVENT: show.bs.modal (Details). Trigger:', activeModalTrigger?.tagName);
+        });
+        detailsModalElement.addEventListener('hidden.bs.modal', function () {
+             log('EVENT: hidden.bs.modal (Details). Returning focus.');
+            if (activeModalTrigger && typeof activeModalTrigger.focus === 'function' && document.body.contains(activeModalTrigger)) {
+                activeModalTrigger.focus();
+            }
+            activeModalTrigger = null;
+             // Resetăm conținutul modalului Details
+             const detailsBody = detailsModalElement.querySelector('#detailsModalBody');
+             if(detailsBody) {
+                detailsBody.innerHTML = `<div class="text-center p-5"><div class="spinner-border text-secondary spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2 mb-0 text-muted small">Se încarcă detaliile articolelor...</p></div>`;
+             }
+             const avizNumberSpan = detailsModalElement.querySelector('#details-aviz-number');
+             if(avizNumberSpan) avizNumberSpan.textContent = '';
+        });
+    }
+
+
+    // --- Atașare Listeneri Butoane Principale ---
+
+    // Buton Editează
+    document.querySelectorAll('.edit-doc-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const docId = this.dataset.docId;
+            const url = this.dataset.url;
+            log(`Edit button clicked. Doc ID: ${docId}, URL: ${url}`);
+            if (!bsEditModal || !editModalElement) {
+                logError("Edit modal not initialized.");
+                return;
+            }
+            const modalContent = editModalElement.querySelector('.modal-content');
+            if (!modalContent) {
+                 logError("Could not find .modal-content inside #editDocumentModal");
+                 return;
+            }
+
+            // Setăm starea de loading ÎNAINTE de fetch
+            modalContent.innerHTML = `<div class="modal-body"><div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2 mb-0">Se încarcă datele pentru editare...</p></div></div>`;
+            bsEditModal.show(button); // Arătăm modalul, pasând butonul ca trigger
+
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(response => {
+                    if (!response.ok) {
+                        logError(`Fetch error: ${response.status} ${response.statusText}`);
+                        return response.text().then(text => {
+                            throw new Error(`HTTP error ${response.status}. Details: ${text.substring(0, 200)}`);
+                        });
+                    }
+                    return response.text();
+                })
+                .then(html => {
+                    log("HTML content received for edit modal.");
+                    // Verificăm dacă modalul încă există (utilizatorul ar fi putut închide rapid)
+                    const currentModalContent = editModalElement.querySelector('.modal-content');
+                    if (currentModalContent) {
+                        currentModalContent.innerHTML = html;
+                        log("Injecting HTML and attaching listeners...");
+                        attachEditModalListeners(); // Atașăm listenerii DUPĂ injectare
+                         // Trigger manual 'shown' event data for focusing logic if needed,
+                         // but it should trigger automatically after injection and modal display.
+                    } else {
+                         log("Modal content disappeared before setting HTML.");
+                    }
+                })
+                .catch(error => {
+                    logError('Error fetching/processing edit modal content:', error);
+                    const currentModalContent = editModalElement.querySelector('.modal-content');
+                    if (currentModalContent) {
+                        // Afișăm un mesaj de eroare mai prietenos în modal
+                         currentModalContent.innerHTML = `<div class="modal-header"><h5 class="modal-title text-danger">Eroare</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><div class="alert alert-danger" role="alert">${CONFIRM_MESSAGES.AJAX_LOAD_ERROR}</div><p class="small text-muted">Detalii: ${error.message}</p></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Închide</button></div>`;
+                    }
+                });
+        });
+    });
+
+    // Buton Detalii
+    document.querySelectorAll('.view-details-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const avizNumber = this.dataset.aviz;
+            const docId = this.dataset.docId;
+             // Construim URL-ul API (asumând că e structurat corect în urls.py)
+             const url = `/document-details/${avizNumber}/?doc_id=${docId}`;
+            log(`Details button clicked. Aviz: ${avizNumber}, Doc ID: ${docId}, URL: ${url}`);
+
+            if (!bsDetailsModal || !detailsModalElement) {
+                logError("Details modal not initialized.");
+                return;
+            }
+
+            const modalBody = detailsModalElement.querySelector('#detailsModalBody');
+            const avizSpan = detailsModalElement.querySelector('#details-aviz-number');
+            if (!modalBody || !avizSpan) {
+                logError("Could not find elements inside #detailsModal");
+                return;
+            }
+
+            // Setăm starea de loading și numărul avizului
+            avizSpan.textContent = avizNumber;
+            modalBody.innerHTML = `<div class="text-center p-5"><div class="spinner-border text-secondary spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2 mb-0 text-muted small">Se încarcă detaliile articolelor...</p></div>`;
+            bsDetailsModal.show(button); // Arătăm modalul
+
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(response => {
+                    if (!response.ok) {
+                        logError(`Fetch error (details): ${response.status} ${response.statusText}`);
+                        return response.json().then(data => { // Încercăm să citim JSON-ul erorii
+                             throw new Error(data.error || `HTTP error ${response.status}`);
+                         });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    log("Details data received:", data);
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+                    let tableHtml = `<p class="text-muted text-center">Nu s-au găsit articole.</p>`;
+                    if (data.items && data.items.length > 0) {
+                        tableHtml = `<table class="table table-sm table-bordered table-striped small">
+                                        <thead>
+                                            <tr>
+                                                <th>Specie</th>
+                                                <th>Soi/Articol</th>
+                                                <th>Cantitate</th>
+                                                <th>UM</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>`;
+                        data.items.forEach(item => {
+                            tableHtml += `<tr>
+                                            <td>${item.specie || '-'}</td>
+                                            <td>${item.soi || item.articol || '-'}</td>
+                                            <td>${item.cantitate || '-'}</td>
+                                            <td>${item.um || '-'}</td>
+                                          </tr>`;
+                        });
+                        tableHtml += `</tbody></table>`;
+                    } else if (data.message) {
+                        tableHtml = `<p class="text-muted text-center">${data.message}</p>`;
+                    }
+                    modalBody.innerHTML = tableHtml;
+                })
+                .catch(error => {
+                    logError('Error fetching/processing details:', error);
+                     modalBody.innerHTML = `<div class="alert alert-warning" role="alert">${CONFIRM_MESSAGES.AJAX_DETAILS_ERROR}<br><small class="text-muted">${error.message}</small></div>`;
+                });
+        });
+    });
+
+    log("Initial setup complete.");
+
+}); // End DOMContentLoaded
+</script>
+{% endblock %}

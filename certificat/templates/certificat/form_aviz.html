@@ -1,0 +1,630 @@
+{% extends "base.html" %}
+{% load static dict_extras %}
+
+{% block title %}Introdu Aviz{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Stiluri pentru validare vizuală în modal (păstrăm, sunt specifice modalului) */
+.input-required-empty {
+  background-color: #ffdddd !important; /* Folosim !important pentru a suprascrie stiluri BS dacă e necesar */
+}
+.input-required-filled {
+  background-color: #ffffff !important;
+  font-weight: bold !important;
+}
+
+/* Stiluri pentru loading overlay (păstrăm) */
+#loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  display: none; /* Ascuns inițial */
+}
+
+.spinner {
+  width: 60px;
+  height: 60px;
+  border: 6px solid #f3f3f3;
+  border-top: 6px solid #3498db; /* Poți schimba culoarea spinnerului dacă dorești */
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-text {
+  margin-top: 20px;
+  color: white;
+  font-size: 18px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Stil adițional pentru tab-urile din modal (similar cu al doilea exemplu) */
+#seriesTabs .nav-link {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.9rem;
+    border-bottom-width: 2px; /* Subliniere mai pronunțată pentru tab-ul activ */
+    text-align: left; /* Aliniere text în tab */
+}
+#seriesTabs .nav-link small {
+    display: block;
+    font-size: 0.75rem;
+    color: #6c757d; /* Gri pentru detalii articol */
+}
+#seriesTabs .nav-link.active {
+    font-weight: bold;
+    color: #0d6efd; /* Fallback to Bootstrap's default primary color */
+}
+#seriesTabs .nav-link small.serie-cantitate-um {
+    display: block; /* Pe rând nou */
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: #dc3545; /* Roșu */
+    margin-top: 3px; /* Puțin spațiu deasupra */
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>
+                <i class="bi bi-input-cursor-text me-2"></i>
+                Introdu date Aviz
+            </span>
+        </div>
+        <div class="card-body">
+            <form id="avizForm" method="post" action="{% url 'generate_docx_aviz' %}">
+                {% csrf_token %}
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-6">
+                        <label for="aviz_number" class="form-label">Număr aviz:</label>
+                        <input type="text" class="form-control" id="aviz_number" name="aviz_number" value="{{ request.GET.aviz_number }}" required placeholder="Introduceți numărul complet al avizului...">
+                    </div>
+
+                    {% if user.userprofile.role.name|lower == "admin" or user.userprofile.role.name|lower == "superadmin" %}
+                        {% if gestiuni %}
+                            <div class="col-md-6">
+                                <label for="gestiune_select" class="form-label">Selectați gestiune:</label>
+                                <select id="gestiune_select" name="gestiune_id" class="form-select">
+                                    {% for g in gestiuni %}
+                                        <option value="{{ g.pk }}" {% if request.GET.gestiune_id and g.pk|stringformat:"s" == request.GET.gestiune_id|stringformat:"s" %}selected{% endif %}>
+                                            {{ g.nume }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+
+                    <div class="col-12 mt-3">
+                        <button type="button" id="completeDetaliiBtn" class="btn btn-primary">
+                            <i class="bi bi-arrow-right-circle"></i> Continuă & Completează Detalii
+                        </button>
+                    </div>
+                </div>
+
+                <input type="hidden" id="action_input" name="action" value="generate">
+
+                <div class="modal fade" id="extraModal" tabindex="-1" aria-labelledby="extraModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                {% if series_list and series_list|length > 0 %}
+                                    <ul class="nav nav-tabs card-header-tabs" id="seriesTabs" role="tablist">
+                                        {% for serie in series_list %}
+                                            {% with forloop.counter as index %}
+                                            {% with serie_data=series_info|get_item:serie %}
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link {% if forloop.first %}active{% endif %}" id="serie-tab-{{ index }}"
+                                                        data-bs-toggle="tab" data-bs-target="#seriePane{{ index }}"
+                                                        type="button" role="tab" aria-controls="seriePane{{ index }}" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
+                                                    <span>LOT: {{ serie }}</span>
+                                                    {% if serie_data.articol %}
+                                                        <small>Articol: {{ serie_data.articol }}</small>
+                                                    {% endif %}
+                                                    {% if serie_data.cantitate is not None and serie_data.um %}
+                                                        <small class="serie-cantitate-um">
+                                                            Cant: {{ serie_data.cantitate|floatformat:"-3" }} {{ serie_data.um }}
+                                                        </small>
+                                                    {% elif serie_data.cantitate is not None %}
+                                                         <small class="serie-cantitate-um">
+                                                            Cant: {{ serie_data.cantitate|floatformat:"-3" }}
+                                                        </small>
+                                                    {% endif %}
+                                                </button>
+                                            </li>
+                                            {% endwith %}
+                                            {% endwith %}
+                                        {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    <h5 class="modal-title" id="extraModalLabel">Detalii Suplimentare Aviz</h5>
+                                {% endif %}
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                {% if series_list and series_list|length > 0 %}
+                                    <div class="tab-content" id="seriesTabsContent">
+                                        {% for serie in series_list %}
+                                            {% with forloop.counter as index %}
+                                            <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" id="seriePane{{ index }}" role="tabpanel" aria-labelledby="serie-tab-{{ index }}">
+                                                <input type="hidden" name="extra-{{ index }}-serie" value="{{ serie }}">
+                                                <h6 class="mb-3 text-primary">Detalii pentru LOT: {{ serie }}</h6>
+                                                <div class="row g-3">
+                                                    <div class="col-md-6">
+                                                        <label for="extra-{{ index }}-nr_ambalaje" class="form-label">Nr. de ambalaje și tip</label>
+                                                        <input type="text" class="form-control form-control-sm" id="extra-{{ index }}-nr_ambalaje" name="extra-{{ index }}-nr_ambalaje" value="{{ extra_data_mapping|get_item:serie|get_item:'nr_ambalaje' }}">
+                                                    </div>
+                                                     <div class="col-md-6">
+                                                        <label for="extra-{{ index }}-samanta_tratata" class="form-label">Sămânța tratată cu</label>
+                                                        <input type="text" class="form-control form-control-sm" id="extra-{{ index }}-samanta_tratata" name="extra-{{ index }}-samanta_tratata" value="{{ extra_data_mapping|get_item:serie|get_item:'samanta_tratata' }}">
+                                                    </div>
+                                                     <div class="col-md-12">
+                                                        <label for="extra-{{ index }}-doc_oficial" class="form-label">Document oficial certificare (nr./emitent/data)</label>
+                                                        <input type="text" class="form-control form-control-sm" id="extra-{{ index }}-doc_oficial" name="extra-{{ index }}-doc_oficial" value="{{ extra_data_mapping|get_item:serie|get_item:'doc_oficial' }}">
+                                                    </div>
+                                                     <div class="col-md-12">
+                                                        <label for="extra-{{ index }}-etch_oficiale" class="form-label">Etichete oficiale (seria și nr. de la/până la)</label>
+                                                        <input type="text" class="form-control form-control-sm" id="extra-{{ index }}-etch_oficiale" name="extra-{{ index }}-etch_oficiale" value="{{ extra_data_mapping|get_item:serie|get_item:'etch_oficiale' }}">
+                                                    </div>
+
+                                                    <h6 class="mt-4 mb-2 text-secondary col-12">Calitatea Lotului</h6>
+                                                    <div class="col-md-4">
+                                                        <label for="extra-{{ index }}-puritate" class="form-label">Puritate fizică</label>
+                                                        <input type="text" class="form-control form-control-sm" id="extra-{{ index }}-puritate" name="extra-{{ index }}-puritate" value="{{ extra_data_mapping|get_item:serie|get_item:'puritate' }}">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label for="extra-{{ index }}-sem_straine" class="form-label">Semințe străine (nr./%)</label>
+                                                        <input type="text" class="form-control form-control-sm" id="extra-{{ index }}-sem_straine" name="extra-{{ index }}-sem_straine" value="{{ extra_data_mapping|get_item:serie|get_item:'sem_straine' }}">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label for="extra-{{ index }}-umiditate" class="form-label">Umiditate (%)</label>
+                                                        <input type="text" class="form-control form-control-sm" id="extra-{{ index }}-umiditate" name="extra-{{ index }}-umiditate" value="{{ extra_data_mapping|get_item:serie|get_item:'umiditate' }}">
+                                                    </div>
+                                                     <div class="col-md-4">
+                                                        <label for="extra-{{ index }}-germinatie" class="form-label">Germinație totală (%)</label>
+                                                        <input type="text" class="form-control form-control-sm" id="extra-{{ index }}-germinatie" name="extra-{{ index }}-germinatie" value="{{ extra_data_mapping|get_item:serie|get_item:'germinatie' }}">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label for="extra-{{ index }}-masa_1000b" class="form-label">Masa a 1000 boabe (g)</label>
+                                                        <input type="text" class="form-control form-control-sm" id="extra-{{ index }}-masa_1000b" name="extra-{{ index }}-masa_1000b" value="{{ extra_data_mapping|get_item:serie|get_item:'masa_1000b' }}">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label for="extra-{{ index }}-cold" class="form-label">Cold test (%)</label>
+                                                        <input type="text" class="form-control form-control-sm" id="extra-{{ index }}-cold" name="extra-{{ index }}-cold" value="{{ extra_data_mapping|get_item:serie|get_item:'cold' }}">
+                                                    </div>
+                                                    <div class="col-md-12">
+                                                        <label for="extra-{{ index }}-stare_sanitara" class="form-label">Stare sanitară</label>
+                                                        <input type="text" class="form-control form-control-sm" id="extra-{{ index }}-stare_sanitara" name="extra-{{ index }}-stare_sanitara" value="{{ extra_data_mapping|get_item:serie|get_item:'stare_sanitara' }}">
+                                                    </div>
+
+                                                     <h6 class="mt-4 mb-2 text-secondary col-12">Origine și Valabilitate</h6>
+                                                     <div class="col-md-4">
+                                                        <label for="extra-{{ index }}-producator" class="form-label">Producător</label>
+                                                        <input type="text" class="form-control form-control-sm" id="extra-{{ index }}-producator" name="extra-{{ index }}-producator" value="{{ extra_data_mapping|get_item:serie|get_item:'producator' }}">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label for="extra-{{ index }}-tara_productie" class="form-label">Țara de producție</label>
+                                                        <input type="text" class="form-control form-control-sm" id="extra-{{ index }}-tara_productie" name="extra-{{ index }}-tara_productie" value="{{ extra_data_mapping|get_item:serie|get_item:'tara_productie' }}">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label for="extra-{{ index }}-garantie" class="form-label">Termen de valabilitate</label>
+                                                        <input type="text" class="form-control form-control-sm" id="extra-{{ index }}-garantie" name="extra-{{ index }}-garantie" value="{{ extra_data_mapping|get_item:serie|get_item:'garantie' }}">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {% endwith %}
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                     <div class="alert alert-warning text-center" role="alert">
+                                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                        Nu au fost găsite (încă) serii pentru avizul introdus.
+                                        <br><small>Apăsați 'Continuă & Completează Detalii' după introducerea numărului de aviz.</small>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                    <i class="bi bi-x-lg"></i> Anulează
+                                </button>
+                                {% if series_list and series_list|length > 0 %}
+                                <button type="submit" class="btn btn-warning save-btn" onclick="document.getElementById('action_input').value='save'">
+                                    <i class="bi bi-save-fill"></i> Salvează Modificări
+                                </button>
+                                <button type="submit" class="btn btn-success generate-btn" onclick="document.getElementById('action_input').value='generate'">
+                                    <i class="bi bi-check-circle-fill"></i> Generează Document Final
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <div class="loading-text">Se generează documentele... Vă rugăm așteptați</div>
+</div>
+{% endblock %}
+
+
+{% block extra_js %}
+{# Scriptul JavaScript rămâne identic cu versiunea anterioară, deoarece logica de interacțiune (buton Continuă, modal, validări, etc.) nu depinde de prezența dropdown-ului de gestiune în HTML, ci doar de valorile trimise prin GET/POST, pe care view-ul le gestionează deja corect. #}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  // Standardized confirmation messages
+  const CONFIRM_MESSAGES = {
+    GENERATE_DOCUMENT: "Ești sigur că vrei să generezi documentul final? Această acțiune nu poate fi anulată.",
+    EMPTY_FIELDS: "Există câmpuri necompletate în filele: {0}\nDoriți să continuați salvarea documentului?",
+    FILL_REQUIRED: "Vă rugăm să completați următoarele câmpuri în fila curentă: \n{0}",
+    ENTER_AVIZ: "Vă rugăm să introduceți numărul avizului înainte de a completa detalii suplimentare.",
+    REQUIRED_FIELDS: "Vă rugăm să completați toate câmpurile obligatorii pentru serii."
+  };
+
+  // Auto-format numeric fields function
+  function setupAutoFormat(element, formatType) {
+    if (!element) return;
+
+    let rawValue = element.value.replace(/[^\d.,-]/g, '').replace(',', '.'); // Acceptăm și virgulă, o înlocuim cu punct
+
+    function formatValue() {
+        // Clean value before formatting
+        rawValue = element.value.replace(/[^\d.,-]/g, '').replace(',', '.');
+        if (rawValue === '' || rawValue === '-' || rawValue === '.') return; // Allow empty or just signs
+
+        let numberValue = parseFloat(rawValue);
+        if (isNaN(numberValue)) {
+            // If it's not a valid number after cleaning, clear the input or handle error
+            // element.value = ''; // Option: clear if invalid
+            return;
+        }
+
+        // Modificare aici: maximumFractionDigits de la 2 la 3
+        let formattedValue = numberValue.toLocaleString('ro-RO', { minimumFractionDigits: 0, maximumFractionDigits: 3 }); // Formatare localizată
+
+        switch(formatType) {
+            case 'percent':
+                formattedValue = formattedValue + ' %';
+                break;
+            case 'kg':
+                formattedValue = formattedValue + ' kg';
+                break;
+            case 'g':
+                 // Pentru grame, poate nu vrem zecimale sau doar una
+                // Modificare și aici: maximumFractionDigits de la 1 la 3
+                formattedValue = numberValue.toLocaleString('ro-RO', { maximumFractionDigits: 3 }) + ' g';
+                break;
+        }
+        element.value = formattedValue;
+    }
+
+    // Restul funcției rămâne neschimbat
+    function cleanValue() {
+        element.value = rawValue;
+    }
+
+    element.addEventListener('focus', cleanValue);
+    element.addEventListener('blur', formatValue);
+    element.addEventListener('input', function() {
+        rawValue = element.value.replace(/[^\d.,-]/g, '').replace(',', '.');
+    });
+
+    if (element.value) formatValue();
+}
+
+
+  // Apply auto-formatting to fields in the modal
+  const extraModal = document.getElementById('extraModal');
+  if (extraModal) {
+    // Funcție helper pentru aplicare formatare
+    function applyFormatToModalInputs(selectors, formatType) {
+        selectors.forEach(function(selectorPart) {
+            extraModal.querySelectorAll(`input[name*="${selectorPart}"]`).forEach(function(input) {
+                setupAutoFormat(input, formatType);
+            });
+        });
+    }
+
+    // Format percentage fields
+    applyFormatToModalInputs(['umiditate', 'puritate', 'sem_straine', 'germinatie', 'cold'], 'percent');
+
+    // Format weight fields (grams)
+    applyFormatToModalInputs(['masa_1000b'], 'g');
+
+    // TODO: Adaugă alte formatări dacă sunt necesare (ex: 'nr_ambalaje' - kg?)
+  }
+
+  // Handler pentru butonul "Completează detalii suplimentare"
+  const avizForm = document.getElementById('avizForm');
+  const completeBtn = document.getElementById('completeDetaliiBtn');
+  const avizInput = document.getElementById('aviz_number');
+  // Selectorul pentru butonul de generare din modal (nu mai e direct submit pe form)
+  const generateModalBtn = document.querySelector('#extraModal .generate-btn');
+
+  if (completeBtn && avizInput) {
+      completeBtn.addEventListener('click', function () {
+        var avizValue = avizInput.value.trim();
+        if (!avizValue) {
+          alert(CONFIRM_MESSAGES.ENTER_AVIZ);
+          avizInput.focus();
+          return;
+        }
+        var gestiuneSelect = document.getElementById('gestiune_select');
+        // Valoarea gestiunii va fi preluată DOAR dacă dropdown-ul există în DOM
+        var gestiuneId = gestiuneSelect ? gestiuneSelect.value : "";
+        // Construim URL-ul pentru reîncărcare (același mecanism)
+        var newUrl = window.location.pathname + '?aviz_number=' + encodeURIComponent(avizValue);
+        // Adăugăm gestiune_id în URL DOAR dacă a fost selectată o valoare
+        if (gestiuneId) {
+          newUrl += '&gestiune_id=' + encodeURIComponent(gestiuneId);
+        }
+        // Afișează overlay-ul ÎNAINTE de reîncărcare pentru feedback vizual
+        document.getElementById('loading-overlay').style.display = 'flex';
+        document.querySelector('#loading-overlay .loading-text').textContent = 'Se încarcă datele avizului...'; // Mesaj specific
+        window.location.href = newUrl;
+      });
+  }
+
+  // Previne submit-ul formularului la apăsarea Enter în câmpul aviz (util)
+  if (avizInput) {
+      avizInput.addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+           // Simulăm click pe butonul de continuare dacă se apasă Enter în câmpul aviz
+          if(completeBtn) {
+            completeBtn.click();
+          }
+        }
+      });
+  }
+
+  // Show modal if aviz_number is in the URL and series exist
+  const urlParams = new URLSearchParams(window.location.search);
+  const hasAvizParam = urlParams.has('aviz_number');
+  // Verificăm dacă există serii din context Django (este necesar ca view-ul să transmită corect lungimea)
+  const seriesListExists = {{ series_list|length|default:0 }} > 0;
+
+  if (hasAvizParam && document.getElementById('extraModal')) {
+      var extraModalEl = document.getElementById('extraModal');
+      var bootstrapModalInstance = new bootstrap.Modal(extraModalEl);
+      // Arată modalul doar dacă există date de afișat (serii) SAU dacă s-a încercat încărcarea unui aviz (chiar dacă nu s-au găsit serii)
+       if (seriesListExists || hasAvizParam) { // Modificat: arată modalul și dacă nu sunt serii, dar s-a cerut un aviz
+           bootstrapModalInstance.show();
+       }
+  }
+
+  // Ascunde overlay-ul după ce pagina s-a încărcat complet (inclusiv modalul dacă e cazul)
+  window.addEventListener('load', () => {
+       const loadingOverlay = document.getElementById('loading-overlay');
+       if (loadingOverlay) {
+           loadingOverlay.style.display = 'none';
+           // Resetăm textul la cel default
+           loadingOverlay.querySelector('.loading-text').textContent = 'Se generează documentele... Vă rugăm așteptați';
+       }
+  });
+
+
+  // Set up modal when shown (focus, validation styles)
+  var extraModalEl = document.getElementById('extraModal');
+  if (extraModalEl) {
+      extraModalEl.addEventListener('shown.bs.modal', function () {
+          console.log("Modal shown");
+          // Ascundem loading overlay ACUM, după ce modalul e vizibil
+          const loadingOverlay = document.getElementById('loading-overlay');
+           if (loadingOverlay) {
+               loadingOverlay.style.display = 'none';
+                loadingOverlay.querySelector('.loading-text').textContent = 'Se generează documentele... Vă rugăm așteptați';
+           }
+
+          // Focus pe primul element editabil din tab-ul activ
+          var activeTabPane = extraModalEl.querySelector('.tab-pane.active');
+          var firstFocusable = activeTabPane ? activeTabPane.querySelector('input:not([type="hidden"]), textarea, select') : null;
+          if(firstFocusable) {
+              console.log("Focusing on:", firstFocusable);
+              firstFocusable.focus();
+          } else {
+              // Dacă nu găsim în tab, încercăm un focus general pe modal (ex: buton închidere)
+              console.log("No focusable element found in active tab. Focusing modal container.");
+              extraModalEl.focus(); // Sau un element specific din modal, dacă nu e tab-content
+          }
+
+          // Aplică validarea vizuală pe inputurile din modal (la afișare)
+          applyInputValidationStyles(extraModalEl);
+      });
+
+      // Reaplica stilurile de validare la schimbarea tab-ului
+       const tabButtons = extraModalEl.querySelectorAll('#seriesTabs .nav-link');
+       tabButtons.forEach(button => {
+           button.addEventListener('shown.bs.tab', function(event) {
+               // Aplicăm stiluri doar pe tab-ul nou activat
+               const activeTabPaneId = event.target.getAttribute('data-bs-target');
+               const activeTabPane = document.querySelector(activeTabPaneId);
+               if (activeTabPane) {
+                    applyInputValidationStyles(activeTabPane); // Aplicăm pe tab-ul specific
+                    // Re-focus pe primul element din noul tab
+                    var firstFocusable = activeTabPane.querySelector('input:not([type="hidden"]), textarea, select');
+                     if(firstFocusable) {
+                        firstFocusable.focus();
+                    }
+               }
+           });
+       });
+  }
+
+
+  // Funcție separată pentru aplicarea stilurilor de validare
+  function applyInputValidationStyles(containerElement) {
+      var inputs = containerElement.querySelectorAll('input[type="text"], textarea'); // Include și textarea dacă e cazul
+      inputs.forEach(function(input) {
+          function updateStyle() {
+              // Verificăm dacă input-ul nu este disabled sau readonly
+              if (!input.disabled && !input.readOnly) {
+                  if (input.value.trim() === '') {
+                      input.classList.add('input-required-empty');
+                      input.classList.remove('input-required-filled');
+                  } else {
+                      input.classList.add('input-required-filled');
+                      input.classList.remove('input-required-empty');
+                  }
+              } else {
+                   // Eliminăm clasele dacă e disabled/readonly
+                   input.classList.remove('input-required-empty', 'input-required-filled');
+              }
+          }
+          updateStyle(); // Aplică stilul inițial
+          // Eliminăm listenerul vechi dacă există și adăugăm unul nou
+          input.removeEventListener('input', updateStyle);
+          input.addEventListener('input', updateStyle);
+      });
+  }
+
+
+  // Funcție pentru validarea formularului în modal (rămâne similară, dar adaptată la stiluri)
+  function validateModalForm() {
+    var activeTab = document.querySelector('#extraModal .tab-pane.active');
+    // Dacă nu avem tab-uri deloc (cazul fără serii), considerăm valid
+    if (!document.querySelector('#extraModal .tab-pane')) {
+         return { isValid: true, emptyTabs: [] };
+    }
+    // Dacă avem tab-uri dar niciunul nu e activ (situație anormală), considerăm invalid
+    if (!activeTab) {
+        console.warn("ValidateModalForm: No active tab found, assuming invalid state.");
+        return { isValid: false };
+    }
+
+    var allTabs = document.querySelectorAll('#extraModal .tab-pane');
+    var tabsWithEmptyFields = [];
+    var firstEmptyFieldInCurrentTab = null;
+    var currentTabHasEmpty = false;
+
+    allTabs.forEach(function(tab) {
+      // Validăm doar inputurile care NU sunt disabled sau readonly
+      var tabInputs = tab.querySelectorAll('input[type="text"]:not(:disabled):not([readonly]), textarea:not(:disabled):not([readonly])');
+      var hasEmptyInThisTab = false;
+      var tabId = tab.id;
+      var tabButton = document.querySelector('[data-bs-target="#' + tabId + '"]');
+      // Încercăm să obținem textul din span, care e mai curat
+      var tabNameElement = tabButton ? tabButton.querySelector('span') : null;
+      var tabName = tabNameElement ? tabNameElement.textContent.trim() : (tabButton ? tabButton.textContent.trim() : tabId);
+
+
+      tabInputs.forEach(function(input) {
+        if (input.value.trim() === '') {
+          hasEmptyInThisTab = true;
+           input.classList.add('input-required-empty'); // Marcăm vizual
+           // Reținem primul câmp gol din tab-ul curent (dacă e activ)
+           if (tab === activeTab && !firstEmptyFieldInCurrentTab) {
+                firstEmptyFieldInCurrentTab = input;
+                currentTabHasEmpty = true;
+           }
+        } else {
+          input.classList.remove('input-required-empty');
+           input.classList.add('input-required-filled'); // Opțional, pentru consistență
+        }
+      });
+
+      if (hasEmptyInThisTab) {
+          tabsWithEmptyFields.push(tabName); // Adăugăm numele tab-ului cu probleme
+      }
+    });
+
+    // Dacă tab-ul curent are câmpuri goale, afișăm alert specific și focusăm
+    if (currentTabHasEmpty && firstEmptyFieldInCurrentTab) {
+         var label = document.querySelector('label[for="' + firstEmptyFieldInCurrentTab.id + '"]');
+         var fieldName = label ? label.textContent : firstEmptyFieldInCurrentTab.name;
+         // Asigură-te că mesajul este formatat corect
+         alert(CONFIRM_MESSAGES.FILL_REQUIRED.replace('{0}', fieldName || 'câmpul marcat'));
+         firstEmptyFieldInCurrentTab.focus();
+         return { isValid: false }; // Oprim procesul
+    }
+
+    // Dacă există câmpuri goale în *alte* tab-uri, întrebăm utilizatorul
+    // Verificăm și dacă tab-ul curent e OK, să nu întrebăm de două ori
+    const otherTabsWithEmpty = tabsWithEmptyFields.filter(name => name !== (activeTab ? (document.querySelector(`[data-bs-target="#${activeTab.id}"] span`)?.textContent.trim() || activeTab.id) : ''));
+    if (otherTabsWithEmpty.length > 0 && !currentTabHasEmpty) {
+         if (!confirm(CONFIRM_MESSAGES.EMPTY_FIELDS.replace('{0}', otherTabsWithEmpty.join(', ')))) {
+            return { isValid: false }; // Oprim dacă utilizatorul anulează
+        }
+    }
+
+    // Dacă am ajuns aici, fie totul e complet, fie utilizatorul a confirmat continuarea
+    return { isValid: true };
+  }
+
+  // Adăugăm confirmare și validare pentru butonul Generează din MODAL
+  if (generateModalBtn) {
+    generateModalBtn.addEventListener('click', function(e) {
+        // Setăm acțiunea corectă înainte de validare/submit
+        document.getElementById('action_input').value = 'generate';
+
+        // Validăm formularul din modal
+        const validationResult = validateModalForm();
+        if (!validationResult.isValid) {
+            e.preventDefault(); // Oprim trimiterea formularului
+            return false;
+        }
+
+        // Confirmare finală
+        if (!confirm(CONFIRM_MESSAGES.GENERATE_DOCUMENT)) {
+            e.preventDefault(); // Oprim trimiterea formularului
+            return false;
+        }
+        // Arată loading overlay DOAR dacă toate validările și confirmările trec
+        document.getElementById('loading-overlay').style.display = 'flex';
+        document.querySelector('#loading-overlay .loading-text').textContent = 'Se generează documentele... Vă rugăm așteptați'; // Text specific
+        // Nu mai returnăm true explicit, lăsăm comportamentul default al butonului submit să continue
+    });
+  }
+
+   // Adăugăm validare și pentru butonul Salvează din MODAL (similar, dar fără confirmare finală)
+   const saveModalBtn = document.querySelector('#extraModal .save-btn');
+    if (saveModalBtn) {
+        saveModalBtn.addEventListener('click', function(e) {
+             // Setăm acțiunea corectă
+             document.getElementById('action_input').value = 'save';
+
+            // Validăm formularul din modal - Aplicăm aceeași validare ca la generare
+            // pentru a încuraja completarea datelor, dar nu blocăm salvarea dacă utilizatorul insistă (prin confirmare)
+            const validationResult = validateModalForm();
+             if (!validationResult.isValid) {
+                 // Chiar dacă nu e valid, întrebăm dacă vrea să salveze oricum?
+                 // if (!confirm("Există câmpuri necompletate. Doriți să salvați oricum datele curente?")) {
+                    // e.preventDefault(); // Oprim dacă validarea eșuează și nu avem confirmare de salvare incompletă
+                     // return false;
+                 // }
+             }
+
+             // Afișăm overlay la salvare (doar dacă validarea a trecut sau a fost confirmată)
+              document.getElementById('loading-overlay').style.display = 'flex';
+              document.querySelector('#loading-overlay .loading-text').textContent = 'Se salvează datele...'; // Text specific
+
+             // Nu mai e nevoie de confirmare specifică pentru salvare, de obicei.
+             // Lăsăm submit-ul să continue.
+        });
+    }
+
+
+  // Nu mai avem un buton principal de generare în afara modalului în acest flow.
+  // Logica de validare a câmpului aviz se face la click pe "Continuă".
+  // Logica de validare a câmpurilor din modal se face la click pe "Salvează" / "Generează".
+
+}); // End DOMContentLoaded
+</script>
+{% endblock %}

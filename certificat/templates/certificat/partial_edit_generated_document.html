@@ -1,0 +1,186 @@
+{% comment %} certificat/partial_edit_generated_document.html {% endcomment %}
+{% load static dict_extras %}
+{% load widget_tweaks %}
+
+<div class="modal-header">
+  {% if formset.forms %}
+    <ul class="nav nav-tabs card-header-tabs" id="seriesTabsEdit" role="tablist">
+      {% for form in formset.forms %}
+        {% with serie_value=form.instance.serie|default:form.initial.serie %}
+          {% with forloop.counter as index %}
+          {% with serie_data_edit=series_info|get_item:serie_value %}
+            <li class="nav-item" role="presentation">
+              <button class="nav-link {% if forloop.first %}active{% endif %}"
+                      id="serie-tab-edit-{{ index }}"
+                      data-bs-toggle="tab" data-bs-target="#seriePaneEdit{{ index }}"
+                      type="button" role="tab" aria-controls="seriePaneEdit{{ index }}"
+                      aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
+                <span>LOT: {{ serie_value }}</span><br>
+                {% if serie_data_edit.articol %}
+                    <small>Articol: {{ serie_data_edit.articol }}</small>
+                {% else %}
+                    <small>Articol: N/A</small>
+                {% endif %}
+                {% if serie_data_edit.cantitate is not None and serie_data_edit.um %}
+                    <small class="serie-cantitate-um">
+                        Cant: {{ serie_data_edit.cantitate|floatformat:"-3" }} {{ serie_data_edit.um }}
+                    </small>
+                {% elif serie_data_edit.cantitate is not None %}
+                     <small class="serie-cantitate-um">
+                        Cant: {{ serie_data_edit.cantitate|floatformat:"-3" }}
+                    </small>
+                {% endif %}
+              </button>
+            </li>
+          {% endwith %}
+          {% endwith %}
+        {% endwith %}
+      {% endfor %}
+    </ul>
+  {% else %}
+     <h5 class="modal-title" id="editModalLabel">
+        Editare detalii pentru Aviz {{ aviz }} - Document {{ doc.document_series }}
+     </h5>
+  {% endif %}
+  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+<div class="modal-body">
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <form action="{% url 'edit_generated_document' doc.id %}" method="post" id="editExtraDetailsForm">
+    {% csrf_token %}
+    {{ formset.management_form }}
+
+    {% if formset.non_form_errors %}
+      <div class="alert alert-danger">
+        {% for error in formset.non_form_errors %}{{ error }}{% endfor %}
+      </div>
+    {% endif %}
+
+    {% if formset.forms %}
+      <div class="tab-content mt-3" id="seriesTabsContentEdit">
+        {% for form in formset.forms %}
+         {% with serie_value=form.instance.serie|default:form.initial.serie %}
+          {% with forloop.counter as index %}
+            <div class="tab-pane fade {% if forloop.first %}show active{% endif %}"
+                 id="seriePaneEdit{{ index }}" role="tabpanel"
+                 aria-labelledby="serie-tab-edit-{{ index }}">
+
+              {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                  {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                </div>
+              {% endif %}
+
+              {% for field in form.hidden_fields %}{{ field }}{% endfor %}
+
+               <h6 class="mb-3 text-primary">Detalii pentru LOT: {{ serie_value }}</h6>
+
+              <div class="row g-3">
+                  <div class="col-md-6">
+                      <label for="{{ form.nr_ambalaje.id_for_label }}" class="form-label">{{ form.nr_ambalaje.label }}</label>
+                      {{ form.nr_ambalaje|add_class:"form-control form-control-sm" }}
+                      {% if form.nr_ambalaje.errors %}<div class="invalid-feedback d-block">{{ form.nr_ambalaje.errors|striptags }}</div>{% endif %}
+                  </div>
+                   <div class="col-md-6">
+                      <label for="{{ form.samanta_tratata.id_for_label }}" class="form-label">{{ form.samanta_tratata.label }}</label>
+                      {{ form.samanta_tratata|add_class:"form-control form-control-sm" }}
+                      {% if form.samanta_tratata.errors %}<div class="invalid-feedback d-block">{{ form.samanta_tratata.errors|striptags }}</div>{% endif %}
+                  </div>
+                   <div class="col-md-12">
+                      <label for="{{ form.doc_oficial.id_for_label }}" class="form-label">{{ form.doc_oficial.label }}</label>
+                      {{ form.doc_oficial|add_class:"form-control form-control-sm" }}
+                      {% if form.doc_oficial.errors %}<div class="invalid-feedback d-block">{{ form.doc_oficial.errors|striptags }}</div>{% endif %}
+                  </div>
+                   <div class="col-md-12">
+                      <label for="{{ form.etch_oficiale.id_for_label }}" class="form-label">{{ form.etch_oficiale.label }}</label>
+                      {{ form.etch_oficiale|add_class:"form-control form-control-sm" }}
+                      {% if form.etch_oficiale.errors %}<div class="invalid-feedback d-block">{{ form.etch_oficiale.errors|striptags }}</div>{% endif %}
+                  </div>
+
+                  <h6 class="mt-4 mb-2 text-secondary col-12">Calitatea Lotului</h6>
+                  <div class="col-md-4">
+                      <label for="{{ form.puritate.id_for_label }}" class="form-label">{{ form.puritate.label }}</label>
+                      {{ form.puritate|add_class:"form-control form-control-sm" }}
+                      {% if form.puritate.errors %}<div class="invalid-feedback d-block">{{ form.puritate.errors|striptags }}</div>{% endif %}
+                  </div>
+                  <div class="col-md-4">
+                      <label for="{{ form.sem_straine.id_for_label }}" class="form-label">{{ form.sem_straine.label }}</label>
+                      {{ form.sem_straine|add_class:"form-control form-control-sm" }}
+                      {% if form.sem_straine.errors %}<div class="invalid-feedback d-block">{{ form.sem_straine.errors|striptags }}</div>{% endif %}
+                  </div>
+                  <div class="col-md-4">
+                      <label for="{{ form.umiditate.id_for_label }}" class="form-label">{{ form.umiditate.label }}</label>
+                      {{ form.umiditate|add_class:"form-control form-control-sm" }}
+                       {% if form.umiditate.errors %}<div class="invalid-feedback d-block">{{ form.umiditate.errors|striptags }}</div>{% endif %}
+                  </div>
+                   <div class="col-md-4">
+                      <label for="{{ form.germinatie.id_for_label }}" class="form-label">{{ form.germinatie.label }}</label>
+                      {{ form.germinatie|add_class:"form-control form-control-sm" }}
+                       {% if form.germinatie.errors %}<div class="invalid-feedback d-block">{{ form.germinatie.errors|striptags }}</div>{% endif %}
+                  </div>
+                  <div class="col-md-4">
+                      <label for="{{ form.masa_1000b.id_for_label }}" class="form-label">{{ form.masa_1000b.label }}</label>
+                      {{ form.masa_1000b|add_class:"form-control form-control-sm" }}
+                       {% if form.masa_1000b.errors %}<div class="invalid-feedback d-block">{{ form.masa_1000b.errors|striptags }}</div>{% endif %}
+                  </div>
+                  <div class="col-md-4">
+                      <label for="{{ form.cold.id_for_label }}" class="form-label">{{ form.cold.label }}</label>
+                      {{ form.cold|add_class:"form-control form-control-sm" }}
+                       {% if form.cold.errors %}<div class="invalid-feedback d-block">{{ form.cold.errors|striptags }}</div>{% endif %}
+                  </div>
+                  <div class="col-md-12">
+                      <label for="{{ form.stare_sanitara.id_for_label }}" class="form-label">{{ form.stare_sanitara.label }}</label>
+                      {{ form.stare_sanitara|add_class:"form-control form-control-sm" }}
+                       {% if form.stare_sanitara.errors %}<div class="invalid-feedback d-block">{{ form.stare_sanitara.errors|striptags }}</div>{% endif %}
+                  </div>
+
+                   <h6 class="mt-4 mb-2 text-secondary col-12">Origine și Valabilitate</h6>
+                   <div class="col-md-4">
+                      <label for="{{ form.producator.id_for_label }}" class="form-label">{{ form.producator.label }}</label>
+                      {{ form.producator|add_class:"form-control form-control-sm" }}
+                       {% if form.producator.errors %}<div class="invalid-feedback d-block">{{ form.producator.errors|striptags }}</div>{% endif %}
+                  </div>
+                  <div class="col-md-4">
+                      <label for="{{ form.tara_productie.id_for_label }}" class="form-label">{{ form.tara_productie.label }}</label>
+                      {{ form.tara_productie|add_class:"form-control form-control-sm" }}
+                       {% if form.tara_productie.errors %}<div class="invalid-feedback d-block">{{ form.tara_productie.errors|striptags }}</div>{% endif %}
+                  </div>
+                  <div class="col-md-4">
+                      <label for="{{ form.garantie.id_for_label }}" class="form-label">{{ form.garantie.label }}</label>
+                      {{ form.garantie|add_class:"form-control form-control-sm" }}
+                      {% if form.garantie.errors %}<div class="invalid-feedback d-block">{{ form.garantie.errors|striptags }}</div>{% endif %}
+                  </div>
+              </div>
+            </div>
+          {% endwith %}
+          {% endwith %}
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-muted">Nu au fost găsite detalii specifice (serii) asociate acestui document pentru editare.</p>
+    {% endif %}
+
+     <div class="modal-footer mt-4">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="bi bi-x-lg"></i> Renunță
+        </button>
+        <button type="submit" class="btn btn-warning save-edit-btn" name="action" value="save">
+            <i class="bi bi-save-fill"></i> Salvează Modificări
+        </button>
+        {% if doc.status != 'finalizat' or request.user.userprofile and request.user.userprofile.role.name|lower == 'superadmin' %}
+          <button type="submit" class="btn btn-success generate-edit-btn" name="action" value="generate">
+              <i class="bi bi-check-circle-fill"></i> Generează Document Final
+          </button>
+        {% endif %}
+     </div>
+  </form>
+</div>

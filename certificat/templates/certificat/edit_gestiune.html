@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Editează Gestiune{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <h2>Editează Gestiunea: {{ gestiune.nume }}</h2>
+  <form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label for="{{ form.nume.id_for_label }}" class="form-label">Nume</label>
+      {{ form.nume }}
+    </div>
+    <div class="mb-3">
+      <label for="{{ form.locatie.id_for_label }}" class="form-label">Locație</label>
+      {{ form.locatie }}
+    </div>
+    <div class="mb-3">
+      <label for="{{ form.cod_inregistrare.id_for_label }}" class="form-label">Cod de Înregistrare</label>
+      {{ form.cod_inregistrare }}
+    </div>
+    <button type="submit" class="btn btn-primary">Salvează modificările</button>
+    <a href="{% url 'gestiuni_list' %}" class="btn btn-secondary">Renunță</a>
+  </form>
+</div>
+{% endblock %}

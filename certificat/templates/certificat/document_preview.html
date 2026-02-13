@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Preview Documente Generat{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <h2>Preview Documente pentru Avizul {{ aviz }}</h2>
+
+  {% if pdf_urls %}
+    {% for url in pdf_urls %}
+      <div class="mb-5">
+        <h4>Document {{ forloop.counter }}</h4>
+        <iframe src="{{ url }}" style="width:100%; height:800px;" frameborder="0"></iframe>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="alert alert-info">
+      <p>Documentele pentru acest aviz au fost rezervate dar încă nu au fost generate.</p>
+      <p>Puteți genera documentele accesând <a href="{% url 'generated_documents_list' %}" class="alert-link">lista de documente</a> și folosind butonul Editează.</p>
+    </div>
+    <a href="{% url 'generated_documents_list' %}" class="btn btn-primary">Înapoi la lista de documente</a>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Editează Rol{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>
+                <i class="bi bi-shield-fill-check me-2"></i> Editare Template Permisiuni Rol: <strong>{{ role.get_name_display }}</strong>
+            </span>
+            <a href="{% url 'administrare' %}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Înapoi la Administrare
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info mb-4">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Atenție:</strong> Modificările aduse acestui rol vor fi aplicate automat la TOȚI cei <strong>{{ users_count }} utilizatori</strong> care au rolul <strong>{{ role.get_name_display }}</strong>.
+                <br>
+                După sincronizare, poți modifica individual permisiunile fiecărui utilizator în pagina de editare profil.
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+
+                <h5 class="mt-4 mb-3 border-bottom pb-2">Rol</h5>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-12">
+                        <label for="{{ form.name.id_for_label }}" class="form-label">Nume Rol:</label>
+                        {{ form.name|add_class:"form-select" }}
+                        <div class="form-text">Numele rolului nu poate fi modificat.</div>
+                        {% if form.name.errors %}
+                            <div class="text-danger">{{ form.name.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <h5 class="mt-4 mb-3 border-bottom pb-2 text-primary">Template Permisiuni pentru Acest Rol</h5>
+                <p class="text-muted mb-3">Aceste setări vor fi aplicate automat la toți utilizatorii care au rolul <strong>{{ role.get_name_display }}</strong>.</p>
+
+                <div class="row g-3">
+                    <div class="col-md-6 mb-2">
+                        <div class="form-check form-switch">
+                            {{ form.ok_aviz|add_class:"form-check-input" }}
+                            <label class="form-check-label" for="{{ form.ok_aviz.id_for_label }}">
+                                <i class="bi bi-file-earmark-plus me-1"></i> Generare Avize/Certificate
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 mb-2">
+                        <div class="form-check form-switch">
+                            {{ form.ok_doc_generate|add_class:"form-check-input" }}
+                            <label class="form-check-label" for="{{ form.ok_doc_generate.id_for_label }}">
+                                <i class="bi bi-journal-check me-1"></i> Acces Certificate Generate
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 mb-2">
+                        <div class="form-check form-switch">
+                            {{ form.ok_plaje|add_class:"form-check-input" }}
+                            <label class="form-check-label" for="{{ form.ok_plaje.id_for_label }}">
+                                <i class="bi bi-body-text me-1"></i> Gestionare Plaje Numere
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 mb-2">
+                        <div class="form-check form-switch">
+                            {{ form.ok_raportare|add_class:"form-check-input" }}
+                            <label class="form-check-label" for="{{ form.ok_raportare.id_for_label }}">
+                                <i class="bi bi-graph-up me-1"></i> Acces Raportare
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 mb-2">
+                        <div class="form-check form-switch">
+                            {{ form.ok_administrare|add_class:"form-check-input" }}
+                            <label class="form-check-label" for="{{ form.ok_administrare.id_for_label }}">
+                                <i class="bi bi-gear-wide-connected me-1"></i> Acces Administrare
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 mb-2">
+                        <div class="form-check form-switch">
+                            {{ form.ok_gestiuni|add_class:"form-check-input" }}
+                            <label class="form-check-label" for="{{ form.ok_gestiuni.id_for_label }}">
+                                <i class="bi bi-building me-1"></i> Gestionare Gestiuni
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 mb-2">
+                        <div class="form-check form-switch">
+                            {{ form.ok_tipologii|add_class:"form-check-input" }}
+                            <label class="form-check-label" for="{{ form.ok_tipologii.id_for_label }}">
+                                <i class="bi bi-collection me-1"></i> Gestionare Tipologii
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <h5 class="mt-4 mb-3 border-bottom pb-2 text-primary">Vizualizare Documente</h5>
+                
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="alert alert-warning mb-3">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <strong>Important:</strong> Această setare controlează ce documente vede utilizatorul în pagina "Certificate Generate"
+                        </div>
+                        <div class="form-check form-switch">
+                            {{ form.vede_toate_documentele|add_class:"form-check-input" }}
+                            <label class="form-check-label fw-bold" for="{{ form.vede_toate_documentele.id_for_label }}">
+                                <i class="bi bi-eye me-2"></i>Vede TOATE documentele din sistem
+                            </label>
+                            <div class="form-text ms-4">
+                                <i class="bi bi-check-circle text-success"></i> Bifat: Vede toate documentele din sistem (de la toți utilizatorii)<br>
+                                <i class="bi bi-x-circle text-warning"></i> Nebifat: Vede doar documentele generate de el
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-top d-flex justify-content-between">
+                    <a href="{% url 'administrare' %}" class="btn btn-secondary">
+                        <i class="bi bi-x-lg"></i> Renunță
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-save-fill"></i> Salvează și Sincronizează cu Utilizatorii ({{ users_count }})
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

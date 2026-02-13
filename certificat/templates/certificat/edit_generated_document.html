@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Editează Document{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <h2>Editează Documentul Generat</h2>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Salvează</button>
+    <a href="{% url 'generated_documents_list' %}" class="btn btn-secondary">Renunță</a>
+  </form>
+</div>
+{% endblock %}

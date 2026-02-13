@@ -1,0 +1,413 @@
+{% extends "base.html" %}
+{% block title %}Home - Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* === General Dashboard Styles === */
+  .dashboard-header {
+    padding: 1.5rem 1.5rem; /* Ajustat padding */
+    border-radius: 0.5rem;
+    margin-bottom: 2rem;
+    background-color: #f8f9fa;
+    border-left: 4px solid #0d6efd;
+    /* MODIFICAT: Adaugat Flexbox pentru a alinia ceasul */
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start; /* Aliniere la partea de sus */
+    gap: 1rem; /* Spatiu intre continut si ceas */
+  }
+
+  .header-main-content {
+      flex-grow: 1; /* Ocupa spatiul disponibil */
+  }
+
+  .greeting {
+    font-size: 1.5rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+
+  .greeting .username {
+    font-weight: 700;
+    color: #0d6efd;
+  }
+
+  .daily-quote {
+    font-style: italic;
+    color: #6c757d;
+    border-left: 3px solid #dee2e6;
+    padding-left: 1rem;
+    margin-top: 1rem; /* Ajustat margin */
+    margin-bottom: 0; /* Eliminat bottom margin */
+  }
+
+  .quote-text {
+    font-size: 1.1rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .quote-author {
+    font-size: 0.9rem;
+    text-align: right;
+    font-weight: 500;
+  }
+
+  /* --- NOU: Container pentru ceas in header --- */
+  .header-clock-container {
+      text-align: right;
+      flex-shrink: 0; /* Nu micsora ceasul */
+      padding-top: 0.25rem; /* Aliniere vizuala cu greeting */
+  }
+
+  #live-clock-display { /* Renamed ID */
+      font-size: 1.1rem; /* Ajustat font size */
+      font-weight: 600;
+      color: #495057; /* Culoare text ceas */
+      background-color: #e9ecef; /* Fundal usor diferit */
+      padding: 0.4rem 0.8rem;
+      border-radius: 0.25rem;
+      display: inline-block; /* Pentru padding/background */
+      min-width: 150px; /* Spatiu minim */
+  }
+  /* --- Sfarsit stil ceas --- */
+
+
+  .dashboard-widgets {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    margin-top: 2rem;
+  }
+
+  @media (min-width: 768px) {
+    .dashboard-widgets {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  /* === Widget Styles (Collapse fix) === */
+  .widget {
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border-top: 4px solid #0d6efd;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0; /* Grid gap handles spacing */
+  }
+
+  .widget-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #495057;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #dee2e6;
+    cursor: pointer;
+    flex-shrink: 0;
+    /* Adaugat atributele direct aici pentru claritate, desi JS le poate controla */
+    /* data-bs-toggle="collapse" implicitly handled by structure? Let's be explicit */
+  }
+
+  /* Styling for when the title itself is the trigger but is collapsed */
+   .widget-title.collapsed {
+       border-bottom-color: transparent;
+   }
+
+  .widget-title i.widget-icon {
+    margin-right: 0.5rem;
+    color: #0d6efd;
+  }
+
+  .widget-title .collapse-icon {
+     color: #6c757d;
+     transition: transform 0.2s ease-in-out;
+  }
+
+   /* Rotate icon when the associated collapse is NOT shown */
+  .widget-title.collapsed .collapse-icon {
+      transform: rotate(-90deg);
+  }
+
+  /* Important: The actual content container */
+  .widget-content {
+      padding: 1.5rem;
+  }
+
+  /* Widget care ocupa toata latimea */
+  .widget-full {
+    grid-column: 1 / -1;
+  }
+
+  /* Specific styles */
+   .stats-card-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+  }
+
+  .stats-card { /* Styles unchanged */ }
+  .stats-card .value { /* Styles unchanged */ }
+  .stats-card .label { /* Styles unchanged */ }
+  .stats-card .icon { /* Styles unchanged */ }
+
+  .chart-container, .donut-chart-container, .pie-chart-container { /* Styles unchanged */ }
+  .loading-indicator { /* Styles unchanged */ }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <div class="dashboard-header">
+    <div class="header-main-content">
+        <div class="greeting">
+            Salut, <span class="username">{{ user.username }}</span>!
+        </div>
+        <div class="daily-quote">
+            <p class="quote-text">{{ quote.text }}</p>
+            <p class="quote-author">— {{ quote.author }}</p>
+        </div>
+    </div>
+    <!-- NOU: Ceasul mutat aici -->
+    <div class="header-clock-container">
+        <div id="live-clock-display"> </div>
+    </div>
+  </div>
+
+    <div class="dashboard-widgets">
+
+    <!-- Statistics Cards Widget -->
+    <div class="widget">
+      <!-- MODIFICAT: aria-expanded="false" -->
+      <div class="widget-title collapsed" data-bs-toggle="collapse" data-bs-target="#collapseStats" aria-expanded="false" aria-controls="collapseStats">
+        <div><i class="bi bi-bar-chart-fill widget-icon"></i> Statistici Generale</div>
+        <i class="bi bi-chevron-down collapse-icon"></i>
+      </div>
+      <!-- MODIFICAT: Eliminat clasa "show" -->
+      <div class="collapse" id="collapseStats">
+        <div class="widget-content">
+          <!-- ... continutul widget-ului de statistici ... -->
+          <div class="stats-card-container">
+            <div class="stats-card">
+              <div>
+                <div class="value">{{ total_finalized_documents }}</div>
+                <div class="label">Doc. Finalizate</div>
+              </div>
+              <div class="icon"><i class="bi bi-file-earmark-check"></i></div>
+            </div>
+            <div class="stats-card">
+              <div>
+                <div class="value">{{ my_distinct_avize }}</div>
+                <div class="label">Avize Introduse</div>
+              </div>
+              <div class="icon"><i class="bi bi-person-vcard"></i></div>
+            </div>
+          </div>
+          <div class="mt-4">
+             <div class="card bg-light border-0">
+              <div class="card-header bg-transparent border-bottom pb-2"><i class="bi bi-calendar-check me-2"></i> Activitate Recentă (30 zile)</div>
+              <div class="card-body pt-2">
+                 <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span>Avize introduse:</span><span class="badge bg-primary rounded-pill fs-6">{{ recent_avize }}</span>
+                 </div>
+                 <hr class="my-2">
+                 <p class="small text-muted mb-1">Documente după tipologie:</p>
+                 {% if recent_tipologies %}
+                   <ul class="list-group list-group-flush">{% for item in recent_tipologies %}<li class="list-group-item d-flex justify-content-between align-items-center px-0 py-1 border-0 bg-transparent"><span>{{ item.name }}</span><span class="badge bg-info rounded-pill">{{ item.count }}</span></li>{% endfor %}</ul>
+                 {% else %}<p class="small text-muted fst-italic">Nu există activitate recentă.</p>{% endif %}
+              </div>
+            </div>
+          </div>
+           <div class="mt-3">
+             <div class="card bg-light border-0">
+              <div class="card-header bg-transparent border-bottom pb-2"><i class="bi bi-building me-2"></i> Statistici pe Gestiuni</div>
+              <div class="card-body pt-2">
+                 {% if gestiune_stats %}
+                   <ul class="list-group list-group-flush">{% for item in gestiune_stats %}<li class="list-group-item d-flex justify-content-between align-items-center px-0 py-1 border-0 bg-transparent"><span>{{ item.name }}</span><span class="badge bg-secondary rounded-pill">{{ item.count }}</span></li>{% endfor %}</ul>
+                 {% else %}<p class="small text-muted fst-italic">Nu există date pe gestiuni.</p>{% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Distribution by Status Widget -->
+    <div class="widget">
+       <!-- MODIFICAT: aria-expanded="false" -->
+       <div class="widget-title collapsed" data-bs-toggle="collapse" data-bs-target="#collapseStatus" aria-expanded="false" aria-controls="collapseStatus">
+         <div><i class="bi bi-pie-chart-fill widget-icon"></i> Distribuție după Status</div>
+         <i class="bi bi-chevron-down collapse-icon"></i>
+      </div>
+      <!-- MODIFICAT: Eliminat clasa "show" -->
+      <div class="collapse" id="collapseStatus">
+        <div class="widget-content">
+            <div class="donut-chart-container" id="statusChartContainer">
+                 <div class="loading-indicator"><i class="bi bi-hourglass-split"></i> Se încarcă graficul...</div>
+            </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- System Information Widget -->
+    <div class="widget">
+       <!-- MODIFICAT: aria-expanded="false" -->
+       <div class="widget-title collapsed" data-bs-toggle="collapse" data-bs-target="#collapseInfo" aria-expanded="false" aria-controls="collapseInfo">
+         <div><i class="bi bi-info-circle-fill widget-icon"></i> Informații Sistem</div>
+         <i class="bi bi-chevron-down collapse-icon"></i>
+      </div>
+      <!-- MODIFICAT: Eliminat clasa "show" -->
+      <div class="collapse" id="collapseInfo">
+        <div class="widget-content">
+             <!-- ... continutul widget-ului de informatii ... -->
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-2 bg-transparent">Versiune Aplicație<span class="badge bg-primary rounded-pill">1.0.0</span></li>
+                <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-2 bg-transparent">Gestiune Curentă<span class="badge bg-secondary rounded-pill">{{ user.userprofile.gestiune.nume|default:"Nespecificată" }}</span></li>
+                <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-2 bg-transparent">Rol Utilizator<span class="badge bg-info rounded-pill">{{ user.userprofile.role.name|default:"Nedefinit" }}</span></li>
+                <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-2 bg-transparent">Data Server<span class="badge bg-light text-dark rounded-pill">{{ current_date|date:"d.m.Y" }}</span></li>
+            </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Monthly Activity Chart Widget (Full Width) -->
+    <div class="widget widget-full">
+       <!-- MODIFICAT: aria-expanded="false" -->
+      <div class="widget-title collapsed" data-bs-toggle="collapse" data-bs-target="#collapseMonthly" aria-expanded="false" aria-controls="collapseMonthly">
+        <div><i class="bi bi-graph-up widget-icon"></i> Evoluție Documente Generate</div>
+        <i class="bi bi-chevron-down collapse-icon"></i>
+      </div>
+       <!-- MODIFICAT: Eliminat clasa "show" -->
+      <div class="collapse" id="collapseMonthly">
+        <div class="widget-content">
+            <div class="chart-container" id="monthlyChartContainer">
+                 <div class="loading-indicator"><i class="bi bi-hourglass-split"></i> Se încarcă graficul...</div>
+            </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tipologii Distribution Widget (Full Width) -->
+    <div class="widget widget-full">
+       <!-- MODIFICAT: aria-expanded="false" -->
+       <div class="widget-title collapsed" data-bs-toggle="collapse" data-bs-target="#collapseTipologii" aria-expanded="false" aria-controls="collapseTipologii">
+         <div><i class="bi bi-collection-fill widget-icon"></i> Distribuție după Tipologie</div>
+         <i class="bi bi-chevron-down collapse-icon"></i>
+      </div>
+       <!-- MODIFICAT: Eliminat clasa "show" -->
+      <div class="collapse" id="collapseTipologii">
+        <div class="widget-content">
+            <div class="pie-chart-container" id="tipologiiChartContainer">
+                 <div class="loading-indicator"><i class="bi bi-hourglass-split"></i> Se încarcă graficul...</div>
+            </div>
+        </div>
+      </div>
+    </div>
+
+  </div> <!-- End dashboard-widgets --> <!-- End dashboard-widgets -->
+</div> <!-- End container -->
+
+<!-- JS Dependencies -->
+<!-- IMPORTANT: Asigura-te ca Bootstrap JS este inclus undeva in base.html sau aici -->
+<!-- Exemplu: -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script> -->
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+
+    // --- Functie pentru ceasul live din HEADER ---
+    function updateLiveClock() {
+      // MODIFICAT: Tinteste noul ID din header
+      const clockElement = document.getElementById('live-clock-display');
+      if (clockElement) {
+        const now = new Date();
+        const optionsDate = { year: 'numeric', month: '2-digit', day: '2-digit' };
+        const optionsTime = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+        const formattedDate = now.toLocaleDateString('ro-RO', optionsDate);
+        const formattedTime = now.toLocaleTimeString('ro-RO', optionsTime);
+        clockElement.textContent = `${formattedDate} ${formattedTime}`;
+      }
+    }
+    updateLiveClock();
+    setInterval(updateLiveClock, 1000);
+    // --- Sfarsit functie ceas ---
+
+    // --- Initializare ApexCharts (neschimbat fata de versiunea anterioara) ---
+     function renderChart(containerId, options, dataCheck) { /* ... cod functie renderChart ... */
+        const container = document.getElementById(containerId);
+        if (!container) { console.error(`Chart container not found: #${containerId}`); return; }
+        container.innerHTML = ''; // Clear placeholder
+        if (dataCheck && dataCheck.length > 0) {
+            try {
+                const chart = new ApexCharts(container, options);
+                chart.render();
+            } catch (error) {
+                console.error(`Error rendering chart #${containerId}:`, error);
+                container.innerHTML = '<p class="text-center text-danger small p-3">Eroare la generarea graficului.</p>';
+            }
+        } else {
+            container.innerHTML = '<p class="text-center text-muted small p-3">Nu există date pentru afișare.</p>';
+        }
+    }
+    // 1. Status Chart
+    const statusData = {{ status_data|safe }};
+    const statusOptions = { /* ... optiuni ... */
+        series: statusData.map(item => item.count), labels: statusData.map(item => item.status), chart: { type: 'donut', height: 230, parentHeightOffset: 0 }, colors: ['#0d6efd', '#20c997', '#ffc107', '#dc3545', '#6c757d'], legend: { position: 'bottom' }, responsive: [{ breakpoint: 480, options: { chart: { width: '100%' }, legend: { position: 'bottom' } } }], plotOptions: { pie: { donut: { size: '55%' } } }
+    };
+    renderChart('statusChartContainer', statusOptions, statusData);
+    // 2. Monthly Chart
+    const monthlyData = {{ monthly_data|safe }};
+    const monthlyOptions = { /* ... optiuni ... */
+        series: [{ name: 'Documente Generate', data: monthlyData.map(item => item.count) }], chart: { height: 300, type: 'area', toolbar: { show: false }, parentHeightOffset: 0 }, dataLabels: { enabled: false }, stroke: { curve: 'smooth', width: 3 }, colors: ['#0d6efd'], xaxis: { categories: monthlyData.map(item => item.month) }, tooltip: { y: { formatter: (val) => val + " documente" } }, fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.7, opacityTo: 0.3, stops: [0, 90, 100] } }
+    };
+    renderChart('monthlyChartContainer', monthlyOptions, monthlyData);
+    // 3. Tipologii Chart
+    const tipologiiData = {{ tipologii_data|safe }};
+    const tipologiiOptions = { /* ... optiuni ... */
+        series: tipologiiData.map(item => item.value), labels: tipologiiData.map(item => item.name), chart: { type: 'pie', height: 230, parentHeightOffset: 0 }, colors: ['#0d6efd', '#6610f2', '#6f42c1', '#d63384', '#dc3545', '#fd7e14', '#20c997'], legend: { position: 'bottom' }, responsive: [{ breakpoint: 480, options: { chart: { width: '100%' }, legend: { position: 'bottom' } } }]
+    };
+    renderChart('tipologiiChartContainer', tipologiiOptions, tipologiiData);
+    // --- Sfarsit initializare ApexCharts ---
+
+
+    // --- Script pentru toggle iconita + clasa 'collapsed' pe TITLU ---
+    // Asculta evenimentele direct pe elementele collapse
+    var collapseElements = document.querySelectorAll('.widget .collapse');
+    collapseElements.forEach(function(collapseEl) {
+      // Gaseste elementul titlu corespunzator (fratele anterior)
+      var titleElement = collapseEl.previousElementSibling;
+
+      if (titleElement && titleElement.matches('.widget-title')) {
+          // Seteaza starea initiala a clasei 'collapsed' pe titlu bazata pe starea initiala a collapse-ului
+          if (!collapseEl.classList.contains('show')) {
+              titleElement.classList.add('collapsed');
+          } else {
+               titleElement.classList.remove('collapsed'); // Asigura ca nu e collapsed daca e 'show'
+          }
+
+          // Actualizeaza clasa 'collapsed' pe titlu la DUPA ce tranzitia s-a terminat
+          collapseEl.addEventListener('shown.bs.collapse', function () {
+            titleElement.classList.remove('collapsed');
+            // Actualizeaza aria-expanded explicit daca Bootstrap nu o face corect (optional)
+            // titleElement.setAttribute('aria-expanded', 'true');
+          });
+
+          collapseEl.addEventListener('hidden.bs.collapse', function () {
+            titleElement.classList.add('collapsed');
+             // Actualizeaza aria-expanded explicit daca Bootstrap nu o face corect (optional)
+            // titleElement.setAttribute('aria-expanded', 'false');
+          });
+      } else {
+          console.warn("Could not find widget-title for collapse element:", collapseEl);
+      }
+    });
+    // --- Sfarsit script toggle ---
+
+  });
+</script>
+{% endblock %}

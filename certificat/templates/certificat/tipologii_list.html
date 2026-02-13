@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Tipologii de Produse{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <h2>Tipologii de Produse</h2>
+  {% if tipologii %}
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Nume</th>
+          <th>Acțiuni</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for tip in tipologii %}
+        <tr>
+          <td>{{ tip.nume }}</td>
+          <td>
+            <a href="{% url 'delete_tipologie' tip.pk %}" class="btn btn-sm btn-danger" onclick="return confirm('Sigur dorești să ștergi această tipologie?');">
+              <i class="bi bi-trash"></i> Șterge
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>Nu s-au găsit tipologii.</p>
+  {% endif %}
+</div>
+{% endblock %}
