@@ -31,6 +31,12 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['ddcf-v1.onrender.com', '127.0.0.1','ddcf.moldovafarming.ro', 'ddcf-mf.moldovafarming.ro']
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://ddcf-mf.moldovafarming.ro',
+    'https://ddcf.moldovafarming.ro',
+    'https://ddcf-v1.onrender.com',
+]
+
 
 # Application definition
 
