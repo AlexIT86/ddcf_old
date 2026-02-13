@@ -29,7 +29,7 @@ SECRET_KEY = 'django-insecure-44efnf-5u&_djyq5wx(pjdi%ex0*&k=9pa3b&$!t8w=c!r0#*8
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['ddcf-v1.onrender.com', '127.0.0.1','ddcf.moldovafarming.ro']
+ALLOWED_HOSTS = ['ddcf-v1.onrender.com', '127.0.0.1','ddcf.moldovafarming.ro', 'ddcf-mf.moldovafarming.ro']
 
 
 # Application definition
