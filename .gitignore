@@ -57,3 +57,7 @@ build/
 *.xls
 log_*.txt
 db.sqlite3-old
+
+# Migration data dumps
+datadump.json
+load_data_no_signals.py

@@ -85,9 +85,6 @@ class SpecieMapping(models.Model):
     def __str__(self):
         return f"{self.specie} -> {self.tipologies}"
 
-# certificat/models.py
-from django.db import models
-
 class SerieExtraData(models.Model):
     serie = models.CharField(max_length=100, unique=True, db_index=True)
     nr_ambalaje = models.CharField(max_length=255, blank=True, null=True)
@@ -116,17 +113,17 @@ class SerieExtraData(models.Model):
         verbose_name_plural = "Date Extra Serii"
 
 class GeneratedDocument(models.Model):
-    aviz_number = models.CharField(max_length=100)  # nu mai e unic
+    aviz_number = models.CharField(max_length=100, db_index=True)  # nu mai e unic
     pdf_file = models.FileField(upload_to="generated_docs/", blank=True, null=True)
     generated_by = models.ForeignKey(User, on_delete=models.CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     context_json = models.TextField(blank=True, null=True)
     partner = models.CharField(max_length=200, blank=True, null=True)  # PARTENER
-    document_series = models.CharField(max_length=100, blank=True, null=True)  # placeholder {{seria}}
+    document_series = models.CharField(max_length=100, blank=True, null=True, db_index=True)  # placeholder {{seria}}
     regenerated = models.BooleanField(default=False)  # Indicator dacă documentul a fost regenerat
     regenerated_at = models.DateTimeField(blank=True, null=True)  # Data ultimei regenerări
     regeneration_count = models.IntegerField(default=0)  # Numărul de regenerări
-    is_deleted = models.BooleanField(default=False)
+    is_deleted = models.BooleanField(default=False, db_index=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
     deleted_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
                                    related_name='deleted_documents')
@@ -135,7 +132,13 @@ class GeneratedDocument(models.Model):
         ('finalizat', 'Finalizat'),
         ('in procesare', 'In procesare'),
     ]
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='salvat')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='salvat', db_index=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['is_deleted', 'created_at'], name='idx_doc_active_date'),
+            models.Index(fields=['generated_by', 'is_deleted'], name='idx_doc_user_active'),
+        ]
 
     def __str__(self):
         return f"Document {self.aviz_number} - {self.document_series} - {self.status}"
@@ -151,11 +154,13 @@ class ActivityLog(models.Model):
     )
     timestamp = models.DateTimeField(
         auto_now_add=True,
+        db_index=True,
         verbose_name="Dată și Oră"
     )
     action_type = models.CharField(
         max_length=100,
         blank=True, # Opțional, pentru categorisire
+        db_index=True,
         verbose_name="Tip Acțiune"
     )
     details = models.TextField(
@@ -186,10 +191,6 @@ class DailyQuote(models.Model):
     class Meta:
         verbose_name = "Citat Zilnic"
         verbose_name_plural = "Citate Zilnice"
-
-# certificat/models.py - Adaugă la finalul fișierului
-
-# certificat/models.py - Adaugă la finalul fișierului
 
 class UserManual(models.Model):
     """Model pentru stocarea manualului de utilizare al aplicației."""
